@@ -10,7 +10,7 @@ import keras.backend as K
 import scipy.spatial
 from operator import mul
 from keras import initializers
-from keras.backend.tensorflow_backend import set_session
+# from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import LearningRateScheduler
 from keras.layers import *
 from keras.layers.pooling import *
