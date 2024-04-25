@@ -1,0 +1,9 @@
+cloudpickle==3.0.0
+Farama-Notifications==0.0.4
+gymnasium==0.29.1
+numpy==1.26.4
+opencv-python==4.9.0.80
+pillow==10.3.0
+pygame==2.5.2
+scipy==1.13.0
+typing_extensions==4.11.0
