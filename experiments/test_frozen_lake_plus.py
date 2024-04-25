@@ -8,7 +8,7 @@ register(
     max_episode_steps=300,
 )
 
-env = gym.make("morl/FrozenLakePlus-v1", render_mode="human", map_name='4x4')
+env = gym.make("morl/FrozenLakePlus-v1", render_mode="human", map_name=None, custom_map_size=20)
 
 observation, info = env.reset(seed=42)
 for _ in range(1000):

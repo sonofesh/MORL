@@ -54,7 +54,7 @@ def is_valid(board: List[List[str]], max_size: int) -> bool:
 
 
 def generate_random_map(
-    size: int = 8, p: float = 0.8, seed: Optional[int] = None
+    size: int = 8, p: List[float] = [0.7, 0.2, 0.1], seed: Optional[int] = None,
 ) -> List[str]:
     """Generates a random valid map (one that has a path from start to goal)
 
@@ -72,8 +72,8 @@ def generate_random_map(
     np_random, _ = seeding.np_random(seed)
 
     while not valid:
-        p = min(1, p)
-        board = np_random.choice(["F", "H"], (size, size), p=[p, 1 - p])
+        p[0] = min(1, p[0])
+        board = np_random.choice(["F", "H", "C"], (size, size), p=p)
         board[0][0] = "S"
         board[-1][-1] = "G"
         valid = is_valid(board, size)
@@ -222,9 +222,11 @@ class FrozenLakePlusEnv(Env):
         map_name="4x4",
         is_slippery=True,
         reset_coins=True,
+        custom_map_size=8,
+
     ):
         if desc is None and map_name is None:
-            desc = generate_random_map()
+            desc = generate_random_map(size=custom_map_size)
         elif desc is None:
             desc = MAPS[map_name]
 
@@ -311,8 +313,14 @@ class FrozenLakePlusEnv(Env):
         newstate = self.to_s(newrow, newcol)
         newletter = self.desc[newrow, newcol]
         terminated = bytes(newletter) in b"GH"
-        reward = float(newletter == b"G")
-        reward += reward + float(newletter == b"C")
+        # reward = float(newletter == b"G")
+        # reward += reward + float(newletter == b"C")
+        reward = [0, 0]
+        if newletter == b"G":
+            reward = [1, 0]
+        elif newletter == b"C":
+            reward = [0, 1]
+
         return newstate, reward, terminated
 
     def step(self, a):
