@@ -5,6 +5,7 @@
 
 from pathlib import Path
 from typing import NamedTuple
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +15,8 @@ from tqdm import tqdm
 
 import gymnasium as gym
 # from gymnasium.envs.toy_text.frozen_lake import generate_random_map
+
+sys.path.append('../../')
 from environments.frozen_lake_plus.frozen_lake_plus import generate_random_map
 
 
@@ -59,7 +62,6 @@ rng = np.random.default_rng(params.seed)
 
 # Create the figure folder if it doesn't exists
 params.savefig_folder.mkdir(parents=True, exist_ok=True)
-
 
 from gymnasium.envs.registration import register
 
@@ -341,8 +343,6 @@ for map_size in map_sizes:
     plot_q_values_map(qtable, env, map_size, first_frame)
 
     env.close()
-
-
 
 def plot_steps_and_rewards(rewards_df, steps_df):
     """Plot the steps and rewards from dataframes."""
