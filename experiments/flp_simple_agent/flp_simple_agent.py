@@ -19,11 +19,12 @@ import gymnasium as gym
 sys.path.append('../../')
 from environments.frozen_lake_plus.frozen_lake_plus import generate_random_map
 
+from models.scalar_morl import *
 
 sns.set_theme()
 
 class Params(NamedTuple):
-    total_episodes: int  # Total episodes
+    total_episodes: int  # Total episodes 
     learning_rate: float  # Learning rate
     gamma: float  # Discounting rate
     epsilon: float  # Exploration probability
@@ -56,9 +57,6 @@ params = Params(
     savefig_folder=Path("../../_static/img/tutorials/"),
 )
 params
-
-# Set the seed
-rng = np.random.default_rng(params.seed)
 
 # Create the figure folder if it doesn't exists
 params.savefig_folder.mkdir(parents=True, exist_ok=True)
@@ -95,54 +93,6 @@ def reward_fn(reward, lambda1=1.0, lambda2=1.0):
     return goal_achieved + coin_collected
 
 
-class Qlearning:
-    def __init__(self, learning_rate, gamma, state_size, action_size):
-        self.state_size = state_size
-        self.action_size = action_size
-        self.learning_rate = learning_rate
-        self.gamma = gamma
-        self.reset_qtable()
-
-    def update(self, state, action, reward, new_state):
-        """Update Q(s,a):= Q(s,a) + lr [R(s,a) + gamma * max Q(s',a') - Q(s,a)]"""
-        delta = (
-            reward
-            + self.gamma * np.max(self.qtable[new_state, :])
-            - self.qtable[state, action]
-        )
-        q_update = self.qtable[state, action] + self.learning_rate * delta
-        return q_update
-
-    def reset_qtable(self):
-        """Reset the Q-table."""
-        self.qtable = np.zeros((self.state_size, self.action_size))
-
-
-class EpsilonGreedy:
-    def __init__(self, epsilon):
-        self.epsilon = epsilon
-
-    def choose_action(self, action_space, state, qtable):
-        """Choose an action `a` in the current world state (s)."""
-        # First we randomize a number
-        explor_exploit_tradeoff = rng.uniform(0, 1)
-
-        # Exploration
-        if explor_exploit_tradeoff < self.epsilon:
-            action = action_space.sample()
-
-        # Exploitation (taking the biggest Q-value for this state)
-        else:
-            # Break ties randomly
-            # If all actions are the same for this state we choose a random one
-            # (otherwise `np.argmax()` would always take the first one)
-            if np.all(qtable[state, :]) == qtable[state, 0]:
-                action = action_space.sample()
-            else:
-                action = np.argmax(qtable[state, :])
-        return action
-
-
 learner = Qlearning(
     learning_rate=params.learning_rate,
     gamma=params.gamma,
@@ -151,6 +101,7 @@ learner = Qlearning(
 )
 explorer = EpsilonGreedy(
     epsilon=params.epsilon,
+    seed=params.seed,
 )
 
 
@@ -175,7 +126,7 @@ def run_env():
 
             while not done:
                 action = explorer.choose_action(
-                    action_space=env.action_space, state=state, qtable=learner.qtable
+                    action_space=env.action_space, q_values=learner.action_values(state)
                 )
 
                 # Log all states and actions
@@ -188,9 +139,7 @@ def run_env():
 
                 done = terminated or truncated
 
-                learner.qtable[state, action] = learner.update(
-                    state, action, reward, new_state
-                )
+                learner.update(state, action, reward, new_state)
 
                 total_rewards += reward
                 step += 1
@@ -326,6 +275,7 @@ for map_size in map_sizes:
     )
     explorer = EpsilonGreedy(
         epsilon=params.epsilon,
+        seed=params.seed
     )
 
     print(f"Map size: {map_size}x{map_size}")
