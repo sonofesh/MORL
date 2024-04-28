@@ -173,8 +173,8 @@ class FrozenLakePlusEnv(Env):
     `map_name="4x4"`: ID to use any of the preloaded maps.
     ```
         "4x4":[
-            "SFFF",
-            "FHFH",
+            "SCFF",
+            "CHFH",
             "FFFH",
             "HFFG"
             ]

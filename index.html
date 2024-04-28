@@ -1,13 +1,69 @@
-<!DOCTYPE html>
-<html lang="en">
-<head prefix="og: http://ogp.me/ns#">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MORL Project</title>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+    <script type="text/javascript">
+      async function main() {
+        let pyodide = await loadPyodide();
+        await pyodide.loadPackage("micropip");
+        const micropip = pyodide.pyimport("micropip");
+        await micropip.install("dist/morl-0.0.1-py3-none-any.whl");
+        await micropip.install("gymnasium");
+        await micropip.install("opencv-python")
+        await micropip.install("flask")
+        await micropip.install("scipy")
+        await micropip.install("asyncio")
 
-</head>
-<body>
-Hey there!
+        pyodide.runPythonAsync(`
 
-</body>
+import gymnasium as gym
+import io, base64
+
+from gymnasium.envs.registration import register
+from render.render import render_browser
+import cv2
+from js import document
+import time
+from asyncio import sleep
+
+register(
+    id='morl/FrozenLakePlus-v1',
+    entry_point='environments.frozen_lake_plus.frozen_lake_plus:FrozenLakePlusEnv',
+    max_episode_steps=300,
+)
+
+env = gym.make("morl/FrozenLakePlus-v1", render_mode="ansi", map_name=None, custom_map_size=20)
+
+
+observation, info = env.reset(seed=42)
+for _ in range(1000):
+    frame = env.render()
+
+    document.querySelector('.img_container').textContent = frame
+    await sleep(1)
+
+    action = env.action_space.sample()  # this is where you would insert your policy
+    observation, reward, terminated, truncated, info = env.step(action)
+
+    print(reward)
+
+    if terminated or truncated:
+        observation, info = env.reset()
+
+env.close()
+
+
+
+
+      `);
+
+      }
+      main();
+    </script>
+    <div class="img_container">
+
+  </div>
+  </body>
 </html>
