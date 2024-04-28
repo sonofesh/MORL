@@ -1,0 +1,85 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="styles.css">
+
+  </head>
+  <body>
+  <!--    <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.26.0a4/full/pyodide.js"></script>-->
+<!--  <script type="text/javascript" src="https://ryanking13.github.io/pyodide-pygame-demo/dist/pyodide.js"></script>-->
+  <script type="text/javascript" src="custom_pyodide/dist/pyodide.js"></script>
+
+    <script type="text/javascript">
+      async function main() {
+        let pyodide = await loadPyodide();
+        await pyodide.loadPackage("micropip");
+        const micropip = pyodide.pyimport("micropip");
+        await micropip.install("dist/morl-0.0.1-py3-none-any.whl");
+        await micropip.install("gymnasium");
+        // await micropip.install("opencv-python")
+        // await micropip.install("flask")
+        // await micropip.install("scipy")
+        await micropip.install("asyncio")
+        await pyodide.loadPackage(["pygame-ce"], { checkIntegrity: false })
+        canvas = document.getElementById("canvas");
+        pyodide.canvas.setCanvas2D(canvas);
+
+        pyodide.runPythonAsync(`
+
+import gymnasium as gym
+import io, base64
+
+from gymnasium.envs.registration import register
+# import cv2
+from js import document
+import time
+from asyncio import sleep
+
+register(
+    id='morl/FrozenLakePlus-v1',
+    entry_point='environments.frozen_lake_plus.frozen_lake_plus:FrozenLakePlusEnv',
+    max_episode_steps=300,
+)
+
+env = gym.make("morl/FrozenLakePlus-v1", render_mode="human", map_name=None, custom_map_size=20)
+
+
+observation, info = env.reset(seed=42)
+for _ in range(1000):
+    #frame = env.render()
+
+    #document.querySelector('.img_container').textContent = frame
+    speed = document.querySelector('#speed').value
+    await sleep(1/int(speed))
+
+    action = env.action_space.sample()  # this is where you would insert your policy
+    observation, reward, terminated, truncated, info = env.step(action)
+
+    print(reward)
+
+    if terminated or truncated:
+        observation, info = env.reset()
+
+env.close()
+
+
+
+
+      `);
+
+      }
+      main();
+    </script>
+    <div class="img_container">
+
+  </div>
+  <div class="demo-content">
+    <canvas id="canvas" width="600" height="500"></canvas>
+  </div>
+
+  <div class="slidecontainer">
+    <label for="speed">Speed:</label>
+    <input type="range" min="1" max="100" value="1" class="slider" id="speed">
+  </div>
+  </body>
+</html>

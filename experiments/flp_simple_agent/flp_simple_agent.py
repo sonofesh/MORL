@@ -50,8 +50,8 @@ params = Params(
     n_runs=20,
     action_size=None,
     state_size=None,
-    proba_frozen=0.8,
-    proba_coin=0.1,
+    proba_frozen=0.5,
+    proba_coin=0.4,
     proba_hole=0.1,
     savefig_folder=Path("../../_static/img/tutorials/"),
 )
@@ -89,9 +89,9 @@ print(f"Action size: {params.action_size}")
 print(f"State size: {params.state_size}")
 
 
-def reward_fn(reward):
-    goal_achieved = reward[0]
-    coin_collected = 0#reward[1]
+def reward_fn(reward, lambda1=1.0, lambda2=1.0):
+    goal_achieved = lambda1 * reward[0]
+    coin_collected = lambda2 * reward[1]
     return goal_achieved + coin_collected
 
 

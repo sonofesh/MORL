@@ -173,8 +173,8 @@ class FrozenLakePlusEnv(Env):
     `map_name="4x4"`: ID to use any of the preloaded maps.
     ```
         "4x4":[
-            "SFFF",
-            "FHFH",
+            "SCFF",
+            "CHFH",
             "FFFH",
             "HFFG"
             ]
@@ -399,6 +399,7 @@ class FrozenLakePlusEnv(Env):
         if self.clock is None:
             self.clock = pygame.time.Clock()
         if self.hole_img is None:
+
             file_name = path.join(path.dirname(__file__), "img/hole.png")
             self.hole_img = pygame.transform.scale(
                 pygame.image.load(file_name), self.cell_size
