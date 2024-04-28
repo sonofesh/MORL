@@ -1,6 +1,8 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <link rel="stylesheet" href="styles.css">
+
   </head>
   <body>
   <!--    <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.26.0a4/full/pyodide.js"></script>-->
@@ -47,7 +49,8 @@ for _ in range(1000):
     #frame = env.render()
 
     #document.querySelector('.img_container').textContent = frame
-    await sleep(1)
+    speed = document.querySelector('#speed').value
+    await sleep(1/int(speed))
 
     action = env.action_space.sample()  # this is where you would insert your policy
     observation, reward, terminated, truncated, info = env.step(action)
@@ -72,6 +75,11 @@ env.close()
   </div>
   <div class="demo-content">
     <canvas id="canvas" width="600" height="500"></canvas>
+  </div>
+
+  <div class="slidecontainer">
+    <label for="speed">Speed:</label>
+    <input type="range" min="1" max="100" value="1" class="slider" id="speed">
   </div>
   </body>
 </html>
