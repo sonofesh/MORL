@@ -30,7 +30,7 @@ def simple_morl_reward_fn(reward, lambda1=1.0, lambda2=1.0):
 
 def run_experiment_1():
     params = Params(
-        total_episodes=2000,
+        total_episodes=1000,
         learning_rate=0.8,
         gamma=0.95,
         epsilon=0.1,
@@ -57,25 +57,6 @@ def run_experiment_1():
 
     for map_size in map_sizes:
 
-        # baseline_setup = lambda params: (
-        #     Qlearning(
-        #         learning_rate=params.learning_rate,
-        #         gamma=params.gamma,
-        #         state_size=params.state_size,
-        #         action_size=params.action_size,
-        #     ), EpsilonGreedy(
-        #         epsilon=params.epsilon,
-        #         seed=params.seed
-        #     )
-        # )
-        #
-        # run_training(
-        #     params,
-        #     baseline_reward_fn,
-        #     map_size=map_size,
-        #     setup_learning_and_explorer_code=baseline_setup
-        # )
-
         simple_morl_setup = lambda params: (
             MO_Qlearning(
                 learning_rate=params.learning_rate,
@@ -97,12 +78,39 @@ def run_experiment_1():
             [1900, [0.5, 0.5]],
         ]
 
+
+        # _, _, qtable = run_training(
+        #     params,
+        #     simple_morl_reward_fn,
+        #     map_size=map_size,
+        #     setup_learning_and_explorer_code=simple_morl_setup,
+        #     scalar_vector_update_schedule=scalar_vector_update_schedule,
+        #     tabular_state_fn=tabular_mo_state,
+        #     eval_total_episodes=10,
+        #     eval_frequency=250
+        # )
+
+
+        scalar_vector_update_schedule_inner_episode = [
+            [0, [0.0, 1.0]],
+            [5, [0.1, 0.9]],
+            [10, [0.4, 0.6]],
+            [15, [0.9, 0.1]],
+            [20, [1.0, 0.0]],
+        ]
+
+        scalar_vector_update_schedule = [
+            [0, [1.0, 0.0]],
+            [500, scalar_vector_update_schedule_inner_episode]
+        ]
+
         _, _, qtable = run_training(
             params,
             simple_morl_reward_fn,
             map_size=map_size,
             setup_learning_and_explorer_code=simple_morl_setup,
             scalar_vector_update_schedule=scalar_vector_update_schedule,
+            # scalar_vector_update_schedule_inner_episode=scalar_vector_update_schedule_inner_episode,
             tabular_state_fn=tabular_mo_state,
             eval_total_episodes=10,
             eval_frequency=250
@@ -127,7 +135,7 @@ def run_experiment_1():
 
         env = get_flp_env(params, map_size, render_mode="human")
         while True:
-            vis_run(partial(setup_learning_and_explorer_code, qtable), tabular_mo_state, params, env, simple_morl_reward_fn, map_size=map_size)
+            vis_run(partial(setup_learning_and_explorer_code, qtable), tabular_mo_state, params, env, simple_morl_reward_fn, map_size=map_size, scalar_vector_update_schedule_inner_episode=scalar_vector_update_schedule_inner_episode)
 
 
 

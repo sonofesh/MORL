@@ -25,8 +25,11 @@ def run_env_fully_tabular(
         progress_bar: bool = True,
         training: bool = True,
         qtables: np.array = None,
-        tabular_state_fn=tabular_state
+        tabular_state_fn=tabular_state,
+        scalar_vector_update_schedule_inner_episode=None
 ):
+    scalar_vector_update_schedule_inner_episode = scalar_vector_update_schedule_inner_episode.copy() if scalar_vector_update_schedule_inner_episode else None
+
     if total_episodes is None:
         total_episodes = params.total_episodes
     if n_runs is None:
@@ -76,9 +79,19 @@ def run_env_fully_tabular(
             cleared_coins = False
 
             while not done:
+                if scalar_vector_update_schedule_inner_episode and len(scalar_vector_update_schedule_inner_episode) > 0:
+                    next_update = scalar_vector_update_schedule_inner_episode[0]
+                    at_i = next_update[0]
+                    if at_i == step:
+                        scalar_vector = next_update[1]
+                        explorer.update(scalar_vector=scalar_vector)
+                        scalar_vector_update_schedule_inner_episode.pop(0)
+
                 action = explorer.choose_action(
                     action_space=env.action_space, q_values=learner.action_values(state)
                 )
+
+
 
                 # Log all states and actions
                 all_states.append(state)
@@ -133,8 +146,12 @@ def run_training(
         eval_frequency: int = 100,
         eval_total_episodes: int = 20,
         scalar_vector_update_schedule=None,
+        scalar_vector_update_schedule_inner_episode=None,
         tabular_state_fn=tabular_state
 ):
+    scalar_vector_update_schedule = scalar_vector_update_schedule.copy() if scalar_vector_update_schedule else None
+    scalar_vector_update_schedule_inner_episode = scalar_vector_update_schedule_inner_episode.copy() if scalar_vector_update_schedule_inner_episode else None
+
     if not map_size:
         map_size = params.map_size
 
@@ -165,27 +182,36 @@ def run_training(
 
     qtable = None
     qtables = None
+
+    curr_scalar_vector_update_schedule_inner_episode = scalar_vector_update_schedule_inner_episode
     for i in range(total_training_episodes):
         if scalar_vector_update_schedule and len(scalar_vector_update_schedule) > 0:
             next_update = scalar_vector_update_schedule[0]
             at_i = next_update[0]
+
             if at_i == i:
+
                 scalar_vector = next_update[1]
-                explorer.update(scalar_vector=scalar_vector)
+                if isinstance(scalar_vector[0], list):
+                    curr_scalar_vector_update_schedule_inner_episode = scalar_vector
+                else:
+                    explorer.update(scalar_vector=scalar_vector)
                 scalar_vector_update_schedule.pop(0)
 
 
         if i % eval_frequency == 0 and i > 0:
+            explorer.eval = True
             eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
-                params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=qtables, tabular_state_fn=tabular_state_fn
+                params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=[qtable], tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
             )
+            explorer.eval = False
 
             eval_stats['cummulative_rewards'] = np.array(eval_stats['cummulative_rewards']).mean()
             print("Training episode: ", i)
             print('Eval stats:', eval_stats)
 
         training_rewards, training_steps, training_episodes, qtables, training_all_states, training_all_actions, training_stats = run_env_fully_tabular(
-            params, env, learner, explorer, reward_fn, qtables=qtables, total_episodes=1, tabular_state_fn=tabular_state_fn
+            params, env, learner, explorer, reward_fn, qtables=qtables, total_episodes=1, tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
         )
 
         # Save the results in dataframes
@@ -203,12 +229,26 @@ def run_training(
             # )  # Sanity check
             plot_first_and_last_frames(env, map_size, first_frame, params)
 
+
+
+    explorer.eval = True
+    eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
+        params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=qtables, tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
+    )
+    explorer.eval = False
+
+    eval_stats['cummulative_rewards'] = np.array(eval_stats['cummulative_rewards']).mean()
+    print("End of training")
+    print('Eval stats:', eval_stats)
+
     env.close()
 
-    return training_res_all, training_st_all, qtable
+
+    return training_res_all, training_st_all, qtables[0]
 
 
-def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, reward_fn, map_size=None):
+def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, reward_fn, map_size=None, scalar_vector_update_schedule_inner_episode=None):
+    scalar_vector_update_schedule_inner_episode = scalar_vector_update_schedule_inner_episode.copy() if scalar_vector_update_schedule_inner_episode else None
     if not map_size:
         map_size = params.map_size
     params = params._replace(action_size=env.action_space.n)
@@ -217,6 +257,7 @@ def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, rew
 
 
     learner, explorer = setup_learning_and_explorer_code(params)
+    explorer.eval = True
 
     state = tabular_state_fn(env.reset(seed=params.seed)[0], map_size=params.map_size)  # Reset the environment
 
@@ -226,6 +267,16 @@ def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, rew
 
 
     while not done:
+        if scalar_vector_update_schedule_inner_episode and len(scalar_vector_update_schedule_inner_episode) > 0:
+            next_update = scalar_vector_update_schedule_inner_episode[0]
+            at_i = next_update[0]
+            if at_i <= step:
+                scalar_vector = next_update[1]
+                print(f"UPDATE TO {scalar_vector}")
+
+                explorer.update(scalar_vector=scalar_vector)
+                scalar_vector_update_schedule_inner_episode.pop(0)
+
         action = explorer.choose_action(
             action_space=env.action_space, q_values=learner.action_values(state)
         )
@@ -245,4 +296,5 @@ def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, rew
 
         # Our new state is state
         state = new_state
+    explorer.eval = False
     return

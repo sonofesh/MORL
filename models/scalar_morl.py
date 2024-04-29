@@ -5,6 +5,7 @@ class EpsilonGreedy():
     def __init__(self, epsilon, seed):
         self.epsilon = epsilon
         self.rng = np.random.default_rng(seed)
+        self.eval = False
 
     def choose_action(self, action_space, q_values):
         """Choose an action `a` in the current world state (s)."""
@@ -12,7 +13,7 @@ class EpsilonGreedy():
         explor_exploit_tradeoff = self.rng.uniform(0, 1)
 
         # Exploration
-        if explor_exploit_tradeoff < self.epsilon: action = action_space.sample()
+        if explor_exploit_tradeoff < self.epsilon: action = action_space.sample() and not self.eval
 
         # Exploitation (taking the biggest Q-value for this state)
         else:
