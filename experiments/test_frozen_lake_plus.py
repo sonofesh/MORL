@@ -9,7 +9,7 @@ register(
     max_episode_steps=300,
 )
 
-env = gym.make("morl/FrozenLakePlus-v1", render_mode="ansi", map_name=None, custom_map_size=20)
+env = gym.make("morl/FrozenLakePlus-v1", render_mode="human", map_name=None, custom_map_size=20)
 
 # @render_browser
 def run():
@@ -19,7 +19,8 @@ def run():
         action = env.action_space.sample()  # this is where you would insert your policy
         observation, reward, terminated, truncated, info = env.step(action)
 
-        print(reward)
+        # print(reward)
+        print(observation)
 
         if terminated or truncated:
             observation, info = env.reset()

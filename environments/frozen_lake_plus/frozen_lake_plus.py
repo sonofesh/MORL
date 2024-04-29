@@ -1,3 +1,4 @@
+import math
 from contextlib import closing
 from io import StringIO
 from os import path
@@ -223,6 +224,7 @@ class FrozenLakePlusEnv(Env):
         is_slippery=True,
         reset_coins=True,
         custom_map_size=8,
+        use_coin_dist: bool = True,
 
     ):
         if desc is None and map_name is None:
@@ -230,6 +232,7 @@ class FrozenLakePlusEnv(Env):
         elif desc is None:
             desc = MAPS[map_name]
 
+        self.use_coin_dist = use_coin_dist
         self.desc = desc = np.asarray(desc, dtype="c")
         self.orig_desc = desc.copy()
 
@@ -237,6 +240,8 @@ class FrozenLakePlusEnv(Env):
         self.reward_range = (0, 1)
         self.is_slippery = is_slippery
         self.reset_coins = reset_coins
+
+        self.coin_coords = []
 
         nA = 4
         nS = nrow * ncol
@@ -271,6 +276,7 @@ class FrozenLakePlusEnv(Env):
 
     def set_p(self):
         self.P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
+        self.coin_coords = []
 
         for row in range(self.nrow):
             for col in range(self.ncol):
@@ -278,6 +284,8 @@ class FrozenLakePlusEnv(Env):
                 for a in range(4):
                     li = self.P[s][a]
                     letter = self.desc[row, col]
+                    if letter in b"C":
+                        self.coin_coords.append((row, col))
                     if letter in b"GH":
                         li.append((1.0, s, 0, True))
                     else:
@@ -332,14 +340,27 @@ class FrozenLakePlusEnv(Env):
         self.lastaction = a
 
         if self.desc[self.from_s(s)] == b"C":
-            self.desc[self.from_s(s)] = b"F" if self.desc[self.from_s(s)] == b"C" else self.desc[self.from_s(s)]
+            self.desc[self.from_s(s)] = b"F"
             self.set_p()
+
+        row, col = self.from_s(s)
+
+        if len(self.coin_coords) > 0:
+            euclidean_distances_to_coins = [abs(row-x[0]) + abs(col-x[1]) for x in self.coin_coords]#[math.sqrt((r - x[0])**2 + (c - x[1])**2) for x in self.coin_coords]
+            coin_dist = min(euclidean_distances_to_coins)
+        else:
+            coin_dist = 0
 
 
         if self.render_mode == "human":
             self.render()
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
-        return int(s), r, t, False, {"prob": p}
+
+        info = {"prob": p, "at_goal": self.desc[self.from_s(s)] == b"G", 'coins_cleared': coin_dist == 0 and self.use_coin_dist}
+
+        if self.use_coin_dist:
+            return [int(s), coin_dist], r, t, False, info
+        return int(s), r, t, False, info
 
     def reset(
         self,
@@ -357,6 +378,17 @@ class FrozenLakePlusEnv(Env):
 
         if self.render_mode == "human":
             self.render()
+
+        r, c = self.from_s(self.s)
+
+        if len(self.coin_coords) > 0:
+            euclidean_distances_to_coins = [abs(r-x[0]) + abs(c-x[1]) for x in self.coin_coords]#[math.sqrt((r - x[0])**2 + (c - x[1])**2) for x in self.coin_coords]
+            coin_dist = min(euclidean_distances_to_coins)
+        else:
+            coin_dist = 0
+
+        if self.use_coin_dist:
+            return [int(self.s), coin_dist], {"prob": 1}
         return int(self.s), {"prob": 1}
 
     def render(self):

@@ -22,18 +22,27 @@ class EpsilonGreedy():
             if np.all(q_values) == q_values[0]: action = action_space.sample()
             else: action = np.argmax(q_values)
         return action
+
+    def update(self, **kwargs):
+        return None
     
 class MO_EpsilonGreedy(EpsilonGreedy):
     """ Choses e-greedy action based on passed in scalarization of Q_function."""
-    def __init__(self, epsilon, seed):
+    def __init__(self, epsilon, seed, scalar_vector):
         super().__init__(epsilon, seed)
+        self.scalar_vector = scalar_vector
 
-    def scalarize(self, q_values, scalar_vector):
+    def scalarize(self, q_values, scalar_vector=None):
+        if scalar_vector is None: scalar_vector = self.scalar_vector
         return np.sum(np.expand_dims(scalar_vector, axis = -1) * q_values, axis = 0)
 
-    def choose_action(self, action_space, q_values, scalar_vector):
+    def choose_action(self, action_space, q_values, scalar_vector=None):
+        if scalar_vector is None: scalar_vector = self.scalar_vector
         q_values = self.scalarize(q_values)
         return super().choose_action(action_space, q_values)
+
+    def update(self, scalar_vector, **kwargs):
+        self.scalar_vector = scalar_vector
 
 class Qlearning:
     def __init__(self, learning_rate, gamma, state_size, action_size):
@@ -60,6 +69,15 @@ class Qlearning:
     def reset_qtable(self):
         """Reset the Q-table."""
         self.qtable = np.zeros((self.state_size, self.action_size))
+
+    def set_qtable(self, qtables):
+        self.qtable = qtables
+
+    def get_qtable(self):
+        return self.qtable
+
+    def average_qtable(self, lists_of_qtables):
+        return np.array(lists_of_qtables).mean(axis=0)
 
 class TC_Qlearning():
     def __init__(self, learning_rate:float, gamma:float, state_low:np.array,
@@ -104,27 +122,40 @@ class TC_Qlearning():
         tile_value_shape = chain(self.num_tilings, self.tile_dim, self.num_actions) 
         self.tile_values = np.zeros(list(tile_value_shape))
 
-class MO_Qlearning(Qlearning):
+class MO_Qlearning():
     """
         Q-learning formulation that tracks and updates multiple value functions
     """
     def __init__(self, learning_rate, gamma, state_size, action_size, reward_dim):
-        super().__init__(learning_rate, gamma, state_size, action_size)
+        self.qfuncs = [Qlearning(learning_rate, gamma, state_size[i], action_size) for i in range(reward_dim)]
+        self.reward_dim = reward_dim
 
-        self.reward_dim = np.zeros(reward_dim)
-        self.reward_weights = np.ones(reward_dim)/(reward_dim)
         self.reset_qtable()
 
-    def update_weights():
-        return None
-    
     def update(self, state, action, reward, new_state):
-        self.update_weights()
-        self.super().update(state, action, reward, new_state)
+        for i in range(self.reward_dim):
+            self.qfuncs[i].update(state[i], action, reward[i], new_state[i])
 
     def reset_qtable(self):
         """Reset the Q-table."""
-        self.qtable = np.zeros((self.state_size, self.action_size, self.reward_dim))
+        for qfunc in self.qfuncs:
+            qfunc.reset_qtable()
+
+    def action_values(self, state):
+        return np.array([qfunc.action_values(state[qidx]) for qidx, qfunc in enumerate(self.qfuncs)])
+
+    def set_qtable(self, qtables):
+        for i, qtable in enumerate(qtables):
+            self.qfuncs[i].qtable = qtable
+
+    def get_qtable(self):
+        return [qfunc.qtable for qfunc in self.qfuncs]
+
+    def average_qtable(self, lists_of_qtables):
+        avg_qtables = []
+        for i in range(self.reward_dim):
+            avg_qtables.append(np.array([qtable[i] for qtable in lists_of_qtables]).mean(axis=0))
+        return avg_qtables
 
 
 class MO_TC_Qlearning:
@@ -139,7 +170,7 @@ class MO_TC_Qlearning:
         self.reward_weights = np.ones(reward_dim)/(reward_dim)
         self.reset_qtable()
 
-    def update_weights():
+    def update_weights(self):
         return None
     
     def update(self, state, action, reward, new_state):
