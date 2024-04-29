@@ -104,8 +104,7 @@ explorer = EpsilonGreedy(
     seed=params.seed,
 )
 
-
-def run_env():
+def run_env(learner, explorer):
     rewards = np.zeros((params.total_episodes, params.n_runs))
     steps = np.zeros((params.total_episodes, params.n_runs))
     episodes = np.arange(params.total_episodes)
@@ -279,7 +278,7 @@ for map_size in map_sizes:
     )
 
     print(f"Map size: {map_size}x{map_size}")
-    rewards, steps, episodes, qtables, all_states, all_actions = run_env()
+    rewards, steps, episodes, qtables, all_states, all_actions = run_env(learner, explorer)
 
     # Save the results in dataframes
     res, st = postprocess(episodes, params, rewards, steps, map_size)

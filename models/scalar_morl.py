@@ -83,12 +83,11 @@ class TC_Qlearning():
         self.reset_qtable()
 
     def action_values(self, state):
-        value = 0.
         rs = state - self.state_low
 
         start_pos = rs + self.offsets
         tiles = np.floor(start_pos/self.tile_width).astype(int)
-        return self.tile_values[tuple(tiles)].mean()
+        return self.tile_values[tuple(tiles)].mean(axis=(0, 1))
     
     def update(self, state, action, reward, new_state):
         rs = state - self.state_low
@@ -98,11 +97,7 @@ class TC_Qlearning():
         tiles = np.floor(start_pos/self.tile_width).astype(int)
 
         delta = reward + self.gamma * np.max(self.action_values(new_state), axis=0) - qa
-        q_update = qa + self.learning_rate * delta
-        self.tile_values[tuple(tiles)] = q_update
-
-    def action_values(self, state):
-        return self.qtable[state]
+        self.tile_values[tuple(tiles)] += self.learning_rate * delta
         
     def reset_qtable(self):
         """Reset the Q-table."""
