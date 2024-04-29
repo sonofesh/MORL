@@ -189,6 +189,8 @@ def run_training(
     qtable = None
     qtables = None
 
+    eval_recorded_stats = {}
+
     curr_scalar_vector_update_schedule_inner_episode = scalar_vector_update_schedule_inner_episode
     for i in range(total_training_episodes):
         if scalar_vector_update_schedule and len(scalar_vector_update_schedule) > 0:
@@ -219,12 +221,15 @@ def run_training(
                     'perfect_episodes': eval_stats['perfect_episodes'],
                     'total_episodes': eval_stats['total_episodes']
                 })
+
             explorer.eval = False
 
             # Average everything in all_eval_stats
             eval_stats = {}
             for k in all_eval_stats[0].keys():
                 eval_stats[k] = np.array([d[k] for d in all_eval_stats]).mean()
+
+            eval_recorded_stats[str(i)] = eval_stats
 
             # eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
             #     params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=[qtable], tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
@@ -245,29 +250,47 @@ def run_training(
         # Save the results in dataframes
         res, st = postprocess(training_episodes, params, training_rewards, training_steps, map_size)
         # qtable = qtables.mean(axis=0)  # Average the Q-table between runs
-        qtable = learner.average_qtable(qtables)
+        #qtable = learner.average_qtable(qtables)
         # learner.set_qtable(qtable)
 
         training_res_all = pd.concat([training_res_all, res])
         training_st_all = pd.concat([training_st_all, st])
 
-
-
-
     explorer.eval = True
-    eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
-        params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=[qtable], tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
-    )
+    all_eval_stats = []
+    for qtbls in qtables:
+        eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
+            params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True,
+            training=False, qtables=[qtbls], tabular_state_fn=tabular_state_fn,
+            scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
+        )
+        all_eval_stats.append({
+            'cummulative_rewards': np.array(eval_stats['cummulative_rewards']).mean(),
+            'completed_episodes': eval_stats['completed_episodes'],
+            'cleared_coin_episodes': eval_stats['cleared_coin_episodes'],
+            'perfect_episodes': eval_stats['perfect_episodes'],
+            'total_episodes': eval_stats['total_episodes']
+        })
+
     explorer.eval = False
+
+    # Average everything in all_eval_stats
+    eval_stats = {}
+    for k in all_eval_stats[0].keys():
+        eval_stats[k] = np.array([d[k] for d in all_eval_stats]).mean()
+
+    eval_recorded_stats[str(i)] = eval_stats
 
     eval_stats['cummulative_rewards'] = np.array(eval_stats['cummulative_rewards']).mean()
     print("End of training")
     print('Eval stats:', eval_stats)
 
+    eval_recorded_stats['EOT'] = eval_stats
+
     env.close()
 
 
-    return training_res_all, training_st_all, qtables[0]
+    return training_res_all, training_st_all, qtables[0], eval_recorded_stats
 
 
 def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, reward_fn, map_size=None, scalar_vector_update_schedule_inner_episode=None):
@@ -287,7 +310,6 @@ def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, rew
     step = 0
     done = False
     total_rewards = 0
-
 
     while not done:
         if scalar_vector_update_schedule_inner_episode and len(scalar_vector_update_schedule_inner_episode) > 0:
