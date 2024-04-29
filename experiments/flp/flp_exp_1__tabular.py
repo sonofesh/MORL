@@ -9,10 +9,14 @@ from pathlib import Path
 import pandas as pd
 
 from experiments.flp.params import Params
-from experiments.flp.tabular_lifecycles import run_training, tabular_mo_state, tabular_state, vis_run
+from experiments.flp.tabular_lifecycles import run_training, tabular_mo_state, tabular_state, vis_run, just_state
 from experiments.flp.utils import get_flp_env
 from models.scalar_morl import Qlearning, EpsilonGreedy, MO_EpsilonGreedy, MO_Qlearning
 
+def baseline_goal_only_reward_fn(reward, lambda1=1.0, lambda2=1.0):
+    goal_achieved = lambda1 * reward[0]
+    coin_collected = lambda2 * reward[1]
+    return goal_achieved #+ coin_collected
 
 
 def baseline_reward_fn(reward, lambda1=1.0, lambda2=1.0):
@@ -30,7 +34,7 @@ def simple_morl_reward_fn(reward, lambda1=1.0, lambda2=1.0):
 
 def run_experiment_1():
     params = Params(
-        total_episodes=1000,
+        total_episodes=2000,
         learning_rate=0.8,
         gamma=0.95,
         epsilon=0.1,
@@ -56,6 +60,50 @@ def run_experiment_1():
     st_all = pd.DataFrame()
 
     for map_size in map_sizes:
+        go_setup = lambda params: (
+            Qlearning(
+                learning_rate=params.learning_rate,
+                gamma=params.gamma,
+                state_size=params.map_size**2,
+                action_size=params.action_size,
+            ), EpsilonGreedy(
+                epsilon=params.epsilon,
+                seed=params.seed,
+            )
+        )
+        _, _, qtable = run_training(
+            params,
+            baseline_goal_only_reward_fn,
+            map_size=map_size,
+            setup_learning_and_explorer_code=go_setup,
+            tabular_state_fn=just_state,
+            eval_total_episodes=10,
+            eval_frequency=250
+        )
+
+        baseline_setup = lambda params: (
+            Qlearning(
+                learning_rate=params.learning_rate,
+                gamma=params.gamma,
+                state_size=params.state_size,
+                action_size=params.action_size,
+            ), EpsilonGreedy(
+                epsilon=params.epsilon,
+                seed=params.seed,
+            )
+        )
+
+        _, _, qtable = run_training(
+            params,
+            baseline_reward_fn,
+            map_size=map_size,
+            setup_learning_and_explorer_code=baseline_setup,
+            tabular_state_fn=tabular_state,
+            eval_total_episodes=10,
+            eval_frequency=250
+        )
+
+
 
         simple_morl_setup = lambda params: (
             MO_Qlearning(
@@ -101,7 +149,8 @@ def run_experiment_1():
 
         scalar_vector_update_schedule = [
             [0, [1.0, 0.0]],
-            [500, scalar_vector_update_schedule_inner_episode]
+            [750, [0.1, 0.9]],
+            [1500, scalar_vector_update_schedule_inner_episode]
         ]
 
         _, _, qtable = run_training(

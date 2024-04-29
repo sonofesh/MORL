@@ -4,6 +4,9 @@ from experiments.flp.utils import get_flp_env, postprocess, plot_states_actions_
 from models.scalar_morl import Qlearning, EpsilonGreedy
 import pandas as pd
 
+def just_state(state, map_size):
+    s, c_dist = state
+    return s
 
 def tabular_state(state, map_size):
     s, c_dist = state
@@ -133,7 +136,10 @@ def run_env_fully_tabular(
             steps[episode, run] = step
 
         if training:
-            qtables.append(learner.get_qtable())
+            if load_checkpoint:
+                qtables[run] = learner.get_qtable()
+            else:
+                qtables.append(learner.get_qtable())
 
     return rewards, steps, episodes, qtables, all_states, all_actions, stats
 
@@ -201,12 +207,34 @@ def run_training(
 
         if i % eval_frequency == 0 and i > 0:
             explorer.eval = True
-            eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
-                params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=[qtable], tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
-            )
+            all_eval_stats = []
+            for qtbls in qtables:
+                eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
+                    params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=[qtbls], tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
+                )
+                all_eval_stats.append({
+                    'cummulative_rewards': np.array(eval_stats['cummulative_rewards']).mean(),
+                    'completed_episodes': eval_stats['completed_episodes'],
+                    'cleared_coin_episodes': eval_stats['cleared_coin_episodes'],
+                    'perfect_episodes': eval_stats['perfect_episodes'],
+                    'total_episodes': eval_stats['total_episodes']
+                })
             explorer.eval = False
 
-            eval_stats['cummulative_rewards'] = np.array(eval_stats['cummulative_rewards']).mean()
+            # Average everything in all_eval_stats
+            eval_stats = {}
+            for k in all_eval_stats[0].keys():
+                eval_stats[k] = np.array([d[k] for d in all_eval_stats]).mean()
+
+            # eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
+            #     params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=[qtable], tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
+            # )
+
+            # eval_stats['cummulative_rewards'] =  np.array(eval_stats['cummulative_rewards']).mean()
+
+            explorer.eval = False
+            plot_first_and_last_frames(env, map_size, first_frame, params)
+
             print("Training episode: ", i)
             print('Eval stats:', eval_stats)
 
@@ -218,22 +246,17 @@ def run_training(
         res, st = postprocess(training_episodes, params, training_rewards, training_steps, map_size)
         # qtable = qtables.mean(axis=0)  # Average the Q-table between runs
         qtable = learner.average_qtable(qtables)
-        learner.set_qtable(qtable)
+        # learner.set_qtable(qtable)
 
         training_res_all = pd.concat([training_res_all, res])
         training_st_all = pd.concat([training_st_all, st])
 
-        if i == total_training_episodes - 1 or (i % eval_frequency == 0 and i > 0):
-            # plot_states_actions_distribution(
-            #     states=training_all_states, actions=training_all_actions, map_size=map_size, params=params
-            # )  # Sanity check
-            plot_first_and_last_frames(env, map_size, first_frame, params)
 
 
 
     explorer.eval = True
     eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
-        params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=qtables, tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
+        params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=[qtable], tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
     )
     explorer.eval = False
 
@@ -272,7 +295,7 @@ def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, rew
             at_i = next_update[0]
             if at_i <= step:
                 scalar_vector = next_update[1]
-                print(f"UPDATE TO {scalar_vector}")
+                # print(f"UPDATE TO {scalar_vector}")
 
                 explorer.update(scalar_vector=scalar_vector)
                 scalar_vector_update_schedule_inner_episode.pop(0)
