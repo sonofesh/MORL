@@ -35,6 +35,7 @@ def simple_morl_reward_fn(reward, lambda1=1.0, lambda2=1.0):
 def run_experiment_1():
     params = Params(
         total_episodes=2000,
+        max_episode_len=None,
         learning_rate=0.4,
         gamma=0.99,
         epsilon=0.1,
@@ -105,7 +106,7 @@ def run_experiment_1():
             eval_frequency=250
         )
 
-        json.dump(baseline_go_res, open("exp1_results/baseline.json", "w"))
+        json.dump(baseline_res, open("exp1_results/baseline.json", "w"))
 
 
         simple_morl_setup = lambda params: (
@@ -140,7 +141,7 @@ def run_experiment_1():
             eval_total_episodes=10,
             eval_frequency=250
         )
-        json.dump(baseline_go_res, open("exp1_results/simple_morl.json", "w"))
+        json.dump(simple_morl_res, open("exp1_results/simple_morl.json", "w"))
 
 
         scalar_vector_update_schedule_inner_episode = [
@@ -168,7 +169,7 @@ def run_experiment_1():
             eval_total_episodes=10,
             eval_frequency=250
         )
-        json.dump(baseline_go_res, open("exp1_results/morl_interepisode.json", "w"))
+        json.dump(inter_episode_scheduling_res, open("exp1_results/morl_interepisode.json", "w"))
 
 
 

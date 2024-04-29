@@ -100,6 +100,7 @@ def get_flp_env(params, map_size=None, render_mode="rgb_array"):
         render_mode=render_mode,
         is_slippery=params.is_slippery,
         reset_coins=True,
+        max_episode_steps=params.max_episode_len,
         desc=generate_random_map(
             size=map_size, p=[params.proba_frozen, params.proba_hole, params.proba_coin], seed=params.seed
         ),

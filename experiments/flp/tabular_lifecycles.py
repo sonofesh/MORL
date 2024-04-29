@@ -61,7 +61,8 @@ def run_env_fully_tabular(
         'completed_episodes': 0,
         'cleared_coin_episodes': 0,
         'perfect_episodes': 0,
-        'cummulative_rewards': []
+        'cummulative_rewards': [],
+        'total_steps': []
     }
 
     for run in range(n_runs):  # Run several times to account for stochasticity
@@ -121,6 +122,7 @@ def run_env_fully_tabular(
                 state = new_state
 
             stats['total_episodes'] += 1
+            stats['total_steps'].append(step)
 
             if goal_reached:
                 stats['completed_episodes'] += 1
@@ -141,6 +143,7 @@ def run_env_fully_tabular(
             else:
                 qtables.append(learner.get_qtable())
 
+    stats['total_steps'] = np.array(stats['total_steps']).mean()
     return rewards, steps, episodes, qtables, all_states, all_actions, stats
 
 
@@ -219,7 +222,8 @@ def run_training(
                     'completed_episodes': eval_stats['completed_episodes'],
                     'cleared_coin_episodes': eval_stats['cleared_coin_episodes'],
                     'perfect_episodes': eval_stats['perfect_episodes'],
-                    'total_episodes': eval_stats['total_episodes']
+                    'total_episodes': eval_stats['total_episodes'],
+                    'total_steps': eval_stats['total_steps']
                 })
 
             explorer.eval = False
@@ -269,7 +273,9 @@ def run_training(
             'completed_episodes': eval_stats['completed_episodes'],
             'cleared_coin_episodes': eval_stats['cleared_coin_episodes'],
             'perfect_episodes': eval_stats['perfect_episodes'],
-            'total_episodes': eval_stats['total_episodes']
+            'total_episodes': eval_stats['total_episodes'],
+            'total_steps': eval_stats['total_steps']
+
         })
 
     explorer.eval = False

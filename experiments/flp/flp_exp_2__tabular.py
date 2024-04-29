@@ -22,7 +22,7 @@ def baseline_goal_only_reward_fn(reward, lambda1=1.0, lambda2=1.0):
 def baseline_reward_fn(reward, lambda1=1.0, lambda2=1.0):
     goal_achieved = lambda1 * reward[0]
     coin_collected = lambda2 * reward[1]
-    return goal_achieved + coin_collected
+    return goal_achieved + 10 * coin_collected
 
 def simple_morl_reward_fn(reward, lambda1=1.0, lambda2=1.0):
     goal_achieved = lambda1 * reward[0]
@@ -36,6 +36,7 @@ def run_experiment_1():
     params = Params(
         total_episodes=2000,
         learning_rate=0.4,
+        max_episode_len=25,
         gamma=0.99,
         epsilon=0.1,
         map_size=5,
@@ -81,7 +82,7 @@ def run_experiment_1():
             eval_frequency=250
         )
 
-        json.dump(baseline_go_res, open("exp1_results/go_baseline.json", "w"))
+        json.dump(baseline_go_res, open("exp2_results/go_baseline.json", "w"))
 
         baseline_setup = lambda params: (
             Qlearning(
@@ -105,7 +106,7 @@ def run_experiment_1():
             eval_frequency=250
         )
 
-        json.dump(baseline_go_res, open("exp1_results/baseline.json", "w"))
+        json.dump(baseline_go_res, open("exp2_results/baseline.json", "w"))
 
 
         simple_morl_setup = lambda params: (
@@ -140,7 +141,7 @@ def run_experiment_1():
             eval_total_episodes=10,
             eval_frequency=250
         )
-        json.dump(baseline_go_res, open("exp1_results/simple_morl.json", "w"))
+        json.dump(baseline_go_res, open("exp2_results/simple_morl.json", "w"))
 
 
         scalar_vector_update_schedule_inner_episode = [
@@ -168,7 +169,7 @@ def run_experiment_1():
             eval_total_episodes=10,
             eval_frequency=250
         )
-        json.dump(baseline_go_res, open("exp1_results/morl_interepisode.json", "w"))
+        json.dump(baseline_go_res, open("exp2_results/morl_interepisode.json", "w"))
 
 
 
