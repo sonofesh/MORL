@@ -17,3 +17,5 @@ class Params(NamedTuple):
     proba_hole: float # Probability that a tile is a hole
     proba_coin: float # Probability that a tile is a coin (Coins are also FROZEN)
     savefig_folder: Path  # Root folder where plots are saved
+    eval_total_episodes: int
+    eval_freq: int

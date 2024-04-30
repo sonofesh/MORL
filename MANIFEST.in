@@ -1,1 +1,2 @@
 include environments/frozen_lake_plus/img/*
+include models/checkpoints/demo_qtable.json

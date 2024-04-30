@@ -61,16 +61,25 @@ print(table_str)
 
 ## total reward over training time
 #
-# import matplotlib.pyplot as plt
-# import numpy as np
-#
-# lines = {
-#     'Goal Only': 'r',
-#     'Baseline': 'g',
-#     'Simple MORL': 'b',
-#     'MORL Inter-episode': 'y'
-# }
-#
+import matplotlib.pyplot as plt
+import numpy as np
+
+indices = [int(k) for k in data[0].keys() if k != 'EOT']
+indices = [str(x) for x in sorted(indices, key=lambda x: int(x))]
+
+for name, d in zip(names, data):
+    plt.plot(indices, [d[x]['cummulative_rewards'] for x in indices], label=name)
+
+plt.legend()
+plt.xlabel('Episodes')
+if len(indices) >10:
+    plt.xticks(indices[::2])
+
+plt.ylabel('Total Reward')
+plt.title('Total Reward over Training Time')
+plt.show()
+
+
 # plt.figure()
 # for name, d in zip(names, data):
 #     plt.plot(np.arange(len(x['total_rewards'] for x in d if x != 'EOT')), d['EOT']['total_rewards'], lines[name], label=name)

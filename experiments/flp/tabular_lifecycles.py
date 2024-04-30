@@ -2,7 +2,6 @@ import numpy as np
 from tqdm import tqdm
 from experiments.flp.utils import get_flp_env, postprocess, plot_states_actions_distribution, plot_first_and_last_frames
 from models.scalar_morl import Qlearning, EpsilonGreedy
-import pandas as pd
 
 def just_state(state, map_size):
     s, c_dist = state
@@ -158,6 +157,7 @@ def run_training(
         scalar_vector_update_schedule_inner_episode=None,
         tabular_state_fn=tabular_state
 ):
+    import pandas as pd
     scalar_vector_update_schedule = scalar_vector_update_schedule.copy() if scalar_vector_update_schedule else None
     scalar_vector_update_schedule_inner_episode = scalar_vector_update_schedule_inner_episode.copy() if scalar_vector_update_schedule_inner_episode else None
 
