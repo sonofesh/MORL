@@ -38,10 +38,10 @@ from js import document
 import time
 from asyncio import sleep
 
-from models.scalar_morl import MO_Qlearning, MO_EpsilonGreedy
+from models.scalar_morl import MO_Qlearning, MO_EpsilonGreedy, MO_LinearQlearning
 import numpy as np
 import json
-from experiments.flp.tabular_lifecycles import vis_run, tabular_mo_state
+from experiments.flp.tabular_lifecycles import vis_run, tabular_mo_state, get_features
 from experiments.flp.flp_exp_1__tabular import simple_morl_reward_fn
 from experiments.flp.utils import get_flp_env
 from functools import partial
@@ -52,10 +52,10 @@ from importlib.resources import files
 
 
 def setup_learning_and_explorer_code(qtable, params):
-    learner = MO_Qlearning(
+    learner = MO_LinearQlearning(
         learning_rate=params.learning_rate,
         gamma=params.gamma,
-        state_size=[params.map_size ** 2, params.state_size],
+        state_dim=[params.state_dim, params.state_dim],
         action_size=params.action_size,
         reward_dim=2
     )
@@ -65,6 +65,7 @@ def setup_learning_and_explorer_code(qtable, params):
         scalar_vector=[1, 1]
     )
 
+    print(qtable[0][0].shape)
     learner.set_qtable(qtable)
     return learner, explorer
 
@@ -73,6 +74,7 @@ params = Params(
     max_episode_len=None,
     learning_rate=0.4,
     gamma=0.99,
+    state_dim=6,
     epsilon=0.1,
     map_size=4,
     seed=123,
@@ -91,22 +93,11 @@ params = Params(
 map_size = params.map_size
 
 env = get_flp_env(params, params.map_size, render_mode="human")
-# while True:
-#     vis_run(partial(setup_learning_and_explorer_code, qtable), tabular_mo_state, params, env, simple_morl_reward_fn, map_size=map_size, scalar_vector_update_schedule_inner_episode=scalar_vector_update_schedule_inner_episode)
 
-
-# load qtable from file
-# list directory contents and print it
-# print(list(Path("models/checkpoints").rglob("*.json")))
-# qtables = json.load(open("models/checkpoints/demo_qtable.json"))
-#with importlib.resources.read_text("models.checkpoints", "demo_qtable.json") as file:
-#    print("HERE")
-#    qtables = json.load(file)
 qstr = files('models.checkpoints').joinpath('demo_qtable.json').read_text()
 qtables = json.loads(qstr)
+qtable = [[np.array(x[0]), x[1]] for x in qtables]
 
-
-qtable = [np.array(x) for x in qtables]
 
 while True:
     if not map_size:
@@ -118,7 +109,7 @@ while True:
     learner, explorer = setup_learning_and_explorer_code(qtable, params)
     explorer.eval = True
 
-    state = tabular_mo_state(env.reset(seed=params.seed)[0], map_size=params.map_size)  # Reset the environment
+    state = get_features(env.reset(seed=params.seed)[0],  shape=params.state_dim)  # Reset the environment
 
     step = 0
     done = False
@@ -142,7 +133,9 @@ while True:
 
         # Take the action (a) and observe the outcome state(s') and reward (r)
         new_state, raw_reward, terminated, truncated, info = env.step(action)
-        new_state = tabular_mo_state(new_state, map_size=params.map_size)
+        # new_state = tabular_mo_state(new_state, map_size=params.map_size)
+        new_state = get_features(new_state, shape=params.state_dim)
+
 
         reward = simple_morl_reward_fn(raw_reward)
 

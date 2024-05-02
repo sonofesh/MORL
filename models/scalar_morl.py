@@ -126,7 +126,7 @@ class LinearQlearning():
         self.w, self.bias = qtables
 
     def get_qtable(self):
-        return self.qtable
+        return (self.w, self.bias)
 
     def average_qtable(self, lists_of_qtables):
         return np.array(lists_of_qtables).mean(axis=0)

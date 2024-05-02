@@ -217,7 +217,7 @@ def run_training(
             all_eval_stats = []
 
             # env = get_flp_env(params, map_size, render_mode='human')
-            # env.metadata['fps'] = 60
+            env.metadata['fps'] = 60
 
             env.reset()
 

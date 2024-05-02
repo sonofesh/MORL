@@ -20,7 +20,7 @@ def baseline_goal_only_reward_fn(reward, lambda1=1.0, lambda2=1.0):
 def baseline_reward_fn(reward, lambda1=1.0, lambda2=1.0):
     goal_achieved = lambda1 * reward[0]
     coin_collected = lambda2 * reward[1]
-    return goal_achieved #+ coin_collected #- 0.1
+    return goal_achieved + coin_collected #- 0.1
 
 def simple_morl_reward_fn(reward, lambda1=1.0, lambda2=1.0):
     goal_achieved = lambda1 * reward[0]
@@ -56,12 +56,13 @@ def run_experiment_1():
     params.savefig_folder.mkdir(parents=True, exist_ok=True)
 
     SKIP_GO = True
-    SKIP_BASE = False
+    # 3.8 reward | 90% completion
+    SKIP_BASE = True
     SKIP_SIMPLE_MORL = True
-    SKIP_INTEREPISODE_MORL = True
+    SKIP_INTEREPISODE_MORL = False
 
-    #map_sizes = [4]#, 7, 9, 11]
-    map_sizes = [20]
+    map_sizes = [4]#, 7, 9, 11]
+    #map_sizes = [20]
     res_all = pd.DataFrame()
     st_all = pd.DataFrame()
 
@@ -132,8 +133,8 @@ def run_experiment_1():
                 learner.set_qtable(qtable)
                 return learner, exp
 
-            while True:
-                vis_run(partial(load, qtable), get_features, params, env, simple_morl_reward_fn, map_size=map_size)
+            # while True:
+            #     vis_run(partial(load, qtable), get_features, params, env, simple_morl_reward_fn, map_size=map_size)
 
 
 
@@ -192,10 +193,10 @@ def run_experiment_1():
 
             scalar_vector_update_schedule_inner_episode = [
                 [0, [0.0, 1.0]],
-                [5, [0.1, 0.9]],
-                [10, [0.4, 0.6]],
-                [15, [0.9, 0.1]],
-                [20, [1.0, 0.0]],
+                [10, [0.1, 0.9]],
+                [20, [0.4, 0.6]],
+                [40, [0.9, 0.1]],
+                [50, [1.0, 0.0]],
             ]
 
             scalar_vector_update_schedule = [
@@ -240,16 +241,19 @@ def run_experiment_1():
             #     vis_run(partial(setup_learning_and_explorer_code, qtable), tabular_mo_state, params, env, simple_morl_reward_fn, map_size=map_size, scalar_vector_update_schedule_inner_episode=scalar_vector_update_schedule_inner_episode)
 
             # save qtable as list of numpy arrays
-            """
-            if isinstance(qtable, list):
-                qtable = [qtable[i].tolist() for i in range(len(qtable))]
-            json.dump(qtable, open("exp1_results/qtable.json", "w"))
+            # if isinstance(qtable, list):
+            #     qtable = [qtable[0][i].tolist() for i in range(len(qtable))]
+            w, b = qtable[0]
+            w2,b2 = qtable[1]
+            qtable = [[w.tolist(), b], [w2.tolist(), b2]]
+
+            json.dump(qtable, open("../../models/checkpoints/qtable.json", "w"))
 
             # load qtable from file
             import numpy as np
-            qtables = json.load(open("exp1_results/qtable.json"))
-            qtable = [np.array(x) for x in qtables]
-            """
+            qtables = json.load(open("../../models/checkpoints/qtable.json"))
+            # qtable = [np.array(x) for x in qtables]
+            qtable = [[np.array(x[0]), x[1]] for x in qtables]
 
             while True:
                 vis_run(partial(setup_learning_and_explorer_code, qtable), get_features, params, env, simple_morl_reward_fn, map_size=map_size, 

@@ -240,9 +240,10 @@ class FrozenLakePlusEnv(Env):
         is_slippery=True,
         reset_coins=True,
         custom_map_size=8,
-        use_coin_dist: bool = False,
+        use_coin_dist: bool = True,
         use_goal_dist_feat: bool = True,
         use_ice_feat: bool = False,
+        use_ice_existence_feat: bool = True,
     ):
         if desc is None and map_name is None:
             desc = generate_random_map(size=custom_map_size)
@@ -262,6 +263,7 @@ class FrozenLakePlusEnv(Env):
 
         self.use_goal_dist_feat = use_goal_dist_feat
         self.use_ice_feat = use_ice_feat
+        self.use_ice_existence_feat = use_ice_existence_feat
 
         self.features_dim = 0
         if self.use_coin_dist:
@@ -270,6 +272,8 @@ class FrozenLakePlusEnv(Env):
             self.features_dim += 2
         if self.use_ice_feat:
             self.features_dim += 2
+        if self.use_ice_existence_feat:
+            self.features_dim += 4
 
 
         self.coin_coords = []
@@ -403,6 +407,13 @@ class FrozenLakePlusEnv(Env):
             coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
             ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
 
+            exsist_ice_vals = [
+                int(any([all(x == self.inc(*self.from_s(self.s), LEFT)) for x in self.ice_coords])),
+                int(any([all(x == self.inc(*self.from_s(self.s), UP)) for x in self.ice_coords])),
+                int(any([all(x == self.inc(*self.from_s(self.s), DOWN)) for x in self.ice_coords])),
+                int(any([all(x == self.inc(*self.from_s(self.s), RIGHT)) for x in self.ice_coords]))
+            ]
+
             features = []
             if self.use_coin_dist:
                 features.extend(coin_dist)
@@ -410,12 +421,14 @@ class FrozenLakePlusEnv(Env):
                 features.extend(goal_dist)
             if self.use_ice_feat:
                 features.extend(ice_dist)
+            if self.use_ice_existence_feat:
+                features.extend(exsist_ice_vals)
 
 
             # features = coin_dist + goal_dist[0] + ice_dist
 
-            if self.p_state is not None and self.p_state == s:
-                r = [x-0.1 for x in r]
+            # if self.p_state is not None and self.p_state == s:
+            #     r = [x-0.1 for x in r]
             self.p_state = s
 
             # print(s, features)
@@ -457,6 +470,13 @@ class FrozenLakePlusEnv(Env):
             coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
             ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
 
+            exsist_ice_vals = [
+                int(any([all(x == self.inc(*self.from_s(self.s), LEFT)) for x in self.ice_coords])),
+                int(any([all(x == self.inc(*self.from_s(self.s), UP)) for x in self.ice_coords])),
+                int(any([all(x == self.inc(*self.from_s(self.s), DOWN)) for x in self.ice_coords])),
+                int(any([all(x == self.inc(*self.from_s(self.s), RIGHT)) for x in self.ice_coords]))
+            ]
+
             # features = coin_dist + goal_dist[0] + ice_dist
             #return a int state rep and then a tuple of state features
             features = []
@@ -466,6 +486,8 @@ class FrozenLakePlusEnv(Env):
                 features.extend(goal_dist)
             if self.use_ice_feat:
                 features.extend(ice_dist)
+            if self.use_ice_existence_feat:
+                features.extend(exsist_ice_vals)
 
 
             return [int(self.s), features], {"prob": 1}
