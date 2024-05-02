@@ -173,6 +173,7 @@ def run_training(
     params = params._replace(action_size=env.action_space.n)
     params = params._replace(state_size=env.observation_space.n * map_size * 2)
     params = params._replace(map_size=map_size)
+    params = params._replace(state_dim=env.features_dim)
 
 
     env.action_space.seed(
@@ -214,6 +215,16 @@ def run_training(
         if i % eval_frequency == 0 and i > 0:
             explorer.eval = True
             all_eval_stats = []
+
+            # env = get_flp_env(params, map_size, render_mode='human')
+            # env.metadata['fps'] = 60
+
+            env.reset()
+
+            env.action_space.seed(
+                params.seed
+            )  # Set the seed to get reproducible results when sampling the action space
+
             for qtbls in qtables:
                 eval_rewards, eval_steps, eval_episodes, _, eval_all_states, eval_all_actions, eval_stats = run_env_fully_tabular(
                     params, env, learner, explorer, reward_fn, total_episodes=eval_total_episodes, n_runs=1, progress_bar=True, training=False, qtables=[qtbls], tabular_state_fn=tabular_state_fn, scalar_vector_update_schedule_inner_episode=curr_scalar_vector_update_schedule_inner_episode
@@ -228,6 +239,14 @@ def run_training(
                 })
 
             explorer.eval = False
+
+            env = get_flp_env(params, map_size)
+
+            env.reset()
+
+            env.action_space.seed(
+                params.seed
+            )  # Set the seed to get reproducible results when sampling the action space
 
             # Average everything in all_eval_stats
             eval_stats = {}

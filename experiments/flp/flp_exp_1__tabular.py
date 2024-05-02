@@ -20,7 +20,7 @@ def baseline_goal_only_reward_fn(reward, lambda1=1.0, lambda2=1.0):
 def baseline_reward_fn(reward, lambda1=1.0, lambda2=1.0):
     goal_achieved = lambda1 * reward[0]
     coin_collected = lambda2 * reward[1]
-    return goal_achieved + coin_collected
+    return goal_achieved #+ coin_collected #- 0.1
 
 def simple_morl_reward_fn(reward, lambda1=1.0, lambda2=1.0):
     goal_achieved = lambda1 * reward[0]
@@ -34,21 +34,21 @@ def run_experiment_1():
     params = Params(
         total_episodes=2000,
         max_episode_len=None,
-        learning_rate=0.05,
+        learning_rate=0.1,
         gamma=0.95,
         epsilon=0.1,
         map_size=5,
         seed=123,
+        state_dim=2,
         is_slippery=False,
         n_runs=20,
         action_size=None,
         state_size=None,
-        state_dim=5,
         proba_frozen=0.5,
         proba_coin=0.4,
         proba_hole=0.1,
         eval_total_episodes=10,
-        eval_freq=100,
+        eval_freq=250,
         savefig_folder=Path("../../_static/img/tutorials/"),
     )
 
@@ -56,11 +56,12 @@ def run_experiment_1():
     params.savefig_folder.mkdir(parents=True, exist_ok=True)
 
     SKIP_GO = True
-    SKIP_BASE = True
+    SKIP_BASE = False
     SKIP_SIMPLE_MORL = True
-    SKIP_INTEREPISODE_MORL = False
+    SKIP_INTEREPISODE_MORL = True
 
-    map_sizes = [4]#, 7, 9, 11]
+    #map_sizes = [4]#, 7, 9, 11]
+    map_sizes = [20]
     res_all = pd.DataFrame()
     st_all = pd.DataFrame()
 
@@ -115,6 +116,28 @@ def run_experiment_1():
             json.dump(baseline_res, open("exp1_results/baseline.json", "w"))
 
 
+            env = get_flp_env(params, map_size, render_mode="human")
+
+            def load(qtable, params):
+                learner = LinearQlearning(
+                    learning_rate=params.learning_rate,
+                    gamma=params.gamma,
+                    state_dim=params.state_dim,
+                    action_size=params.action_size,
+                )
+                exp = EpsilonGreedy(
+                    epsilon=params.epsilon,
+                    seed=params.seed,
+                )
+                learner.set_qtable(qtable)
+                return learner, exp
+
+            while True:
+                vis_run(partial(load, qtable), get_features, params, env, simple_morl_reward_fn, map_size=map_size)
+
+
+
+
         if not SKIP_SIMPLE_MORL:
             simple_morl_setup = lambda params: (
                 MO_LinearQlearning(
@@ -149,6 +172,7 @@ def run_experiment_1():
                 eval_frequency=params.eval_freq
             )
             json.dump(simple_morl_res, open("exp1_results/simple_morl.json", "w"))
+
         
 
         if not SKIP_INTEREPISODE_MORL:

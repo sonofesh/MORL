@@ -13,7 +13,8 @@ class EpsilonGreedy():
         explor_exploit_tradeoff = self.rng.uniform(0, 1)
 
         # Exploration
-        if explor_exploit_tradeoff < self.epsilon: action = action_space.sample() and not self.eval
+        if explor_exploit_tradeoff < self.epsilon and not self.eval:
+            action = action_space.sample()
 
         # Exploitation (taking the biggest Q-value for this state)
         else:
@@ -95,8 +96,9 @@ class LinearQlearning():
             + self.gamma * np.max(self.action_values(new_state), axis=0)
             - self.q_value(state, action)
         )
+
         self.w[action] = self.w[action] + self.learning_rate * delta * np.array(state)
-        self.bias += self.learning_rate * delta
+        # self.bias += self.learning_rate * delta
 
     def q_value(self, state, action):
         #print('state', state)
@@ -109,8 +111,9 @@ class LinearQlearning():
 
     def action_values(self, state):
         #create state action vector for all actions
-        f_a = np.repeat(np.expand_dims(state, axis=0), self.action_size, axis=0)
-        return (self.w * f_a).sum(axis = 1) + self.bias
+        # f_a = np.repeat(np.expand_dims(state, axis=0), self.action_size, axis=0)
+        # return (self.w * f_a).sum(axis = 1) + self.bias
+        return np.dot(self.w, state) + self.bias
         
     def reset_qtable(self):
         """Reset the Q-table."""

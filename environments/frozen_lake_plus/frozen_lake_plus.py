@@ -89,10 +89,11 @@ def get_abs_min(row, col, coin_dist):
     return row - coin_dist[min_ind, 0], col - coin_dist[min_ind, 1]
 
 def normalize(val, min_val, max_val):
-    return val
+    # return val
     return (val - min_val)/(max_val - min_val)
 
 def euc_dist(row, col, target, norm = 2):
+    return row - target[0], col - target[1]
     distance = pow(row - target[0], norm) + pow(col - target[1], norm)
     return pow(distance, 1/norm)
 
@@ -239,8 +240,9 @@ class FrozenLakePlusEnv(Env):
         is_slippery=True,
         reset_coins=True,
         custom_map_size=8,
-        use_coin_dist: bool = True,
-
+        use_coin_dist: bool = False,
+        use_goal_dist_feat: bool = True,
+        use_ice_feat: bool = False,
     ):
         if desc is None and map_name is None:
             desc = generate_random_map(size=custom_map_size)
@@ -255,6 +257,20 @@ class FrozenLakePlusEnv(Env):
         self.reward_range = (0, 1)
         self.is_slippery = is_slippery
         self.reset_coins = reset_coins
+
+        self.p_state = 0
+
+        self.use_goal_dist_feat = use_goal_dist_feat
+        self.use_ice_feat = use_ice_feat
+
+        self.features_dim = 0
+        if self.use_coin_dist:
+            self.features_dim += 2
+        if self.use_goal_dist_feat:
+            self.features_dim += 2
+        if self.use_ice_feat:
+            self.features_dim += 2
+
 
         self.coin_coords = []
 
@@ -378,15 +394,31 @@ class FrozenLakePlusEnv(Env):
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
 
         info = {"prob": p, "at_goal": self.desc[self.from_s(s)] == b"G", 'coins_cleared': coin_dist == 0 and self.use_coin_dist}
+        if t and not self.desc[self.from_s(s)] == b"G":
+            r = [x-0.1 for x in r]
 
-        if self.use_coin_dist:
+        if self.features_dim > 0:
             #print('max_dist', euc_dist(0, 0, self.goal))
-            goal_dist = normalize(euc_dist(row, col, self.goal), 0, euc_dist(0, 0, self.goal)),
+            goal_dist = normalize(euc_dist(row, col, self.goal)[0], 0, euc_dist(0, 0, self.goal)[0]), normalize(euc_dist(row, col, self.goal)[1], 0, euc_dist(0, 0, self.goal)[1]),
             coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
             ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
 
-            features = coin_dist + goal_dist + ice_dist
-            print(s, features)
+            features = []
+            if self.use_coin_dist:
+                features.extend(coin_dist)
+            if self.use_goal_dist_feat:
+                features.extend(goal_dist)
+            if self.use_ice_feat:
+                features.extend(ice_dist)
+
+
+            # features = coin_dist + goal_dist[0] + ice_dist
+
+            if self.p_state is not None and self.p_state == s:
+                r = [x-0.1 for x in r]
+            self.p_state = s
+
+            # print(s, features)
             #return a int state rep and then a tuple of state features
             return [int(s), features], r, t, False, info
         return int(s), r, t, False, info
@@ -397,6 +429,7 @@ class FrozenLakePlusEnv(Env):
         seed: Optional[int] = None,
         options: Optional[dict] = None,
     ):
+        self.p_state = 0
         super().reset(seed=seed)
         if self.reset_coins:
             self.desc = self.orig_desc.copy()
@@ -416,14 +449,25 @@ class FrozenLakePlusEnv(Env):
         if len(self.ice_coords) > 0: ice_dist = get_abs_min(row, col, self.ice_coords)
         else: ice_dist = (20, 20)
 
-        if self.use_coin_dist:
+        if self.features_dim > 0:
             #print('max_dist', euc_dist(0, 0, self.goal))
-            goal_dist = normalize(euc_dist(row, col, self.goal), 0, euc_dist(0, 0, self.goal)),
+            # goal_dist = normalize(euc_dist(row, col, self.goal), 0, euc_dist(0, 0, self.goal)),
+            # goal_dist = normalize(euc_dist(row, col, self.goal)[0], 0, euc_dist(0, 0, self.goal)[0]),
+            goal_dist = normalize(euc_dist(row, col, self.goal)[0], 0, euc_dist(0, 0, self.goal)[0]), normalize(euc_dist(row, col, self.goal)[1], 0, euc_dist(0, 0, self.goal)[1]),
             coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
             ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
 
-            features = coin_dist + goal_dist + ice_dist
+            # features = coin_dist + goal_dist[0] + ice_dist
             #return a int state rep and then a tuple of state features
+            features = []
+            if self.use_coin_dist:
+                features.extend(coin_dist)
+            if self.use_goal_dist_feat:
+                features.extend(goal_dist)
+            if self.use_ice_feat:
+                features.extend(ice_dist)
+
+
             return [int(self.s), features], {"prob": 1}
         
         return int(self.s), {"prob": 1}
