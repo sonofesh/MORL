@@ -51,7 +51,6 @@ class Qlearning:
         self.action_size = action_size
         self.learning_rate = learning_rate
         self.gamma = gamma
-
         self.reset_qtable()
 
     def update(self, state, action, reward, new_state):
@@ -80,6 +79,88 @@ class Qlearning:
     def average_qtable(self, lists_of_qtables):
         return np.array(lists_of_qtables).mean(axis=0)
 
+class LinearQlearning():
+    def __init__(self, learning_rate, gamma, state_dim, action_size):
+        self.feature_dim = state_dim
+        self.action_size = action_size
+        self.learning_rate = learning_rate
+        self.gamma = gamma
+
+        self.reset_qtable() #stores feature weights 
+
+    def update(self, state, action, reward, new_state):
+        """Update Q(s,a):= Q(s,a) + lr [R(s,a) + gamma * max Q(s',a') - Q(s,a)]"""
+        delta = (
+            reward
+            + self.gamma * np.max(self.action_values(new_state), axis=0)
+            - self.q_value(state, action)
+        )
+        self.w[action] = self.w[action] + self.learning_rate * delta * np.array(state)
+        self.bias += self.learning_rate * delta
+
+    def q_value(self, state, action):
+        #print('state', state)
+        try:
+            result = (self.w[action] * state).sum() + self.bias
+        except FloatingPointError as e:
+            print("Overflow", state, self.w[action], self.bias)
+
+        return result
+
+    def action_values(self, state):
+        #create state action vector for all actions
+        f_a = np.repeat(np.expand_dims(state, axis=0), self.action_size, axis=0)
+        return (self.w * f_a).sum(axis = 1) + self.bias
+        
+    def reset_qtable(self):
+        """Reset the Q-table."""
+        self.w = np.zeros((self.action_size, self.feature_dim))
+        self.bias = 0
+        self.qtable = (self.w, self.bias)
+
+    def set_qtable(self, qtables):
+        self.qtable = qtables
+        self.w, self.bias = qtables
+
+    def get_qtable(self):
+        return self.qtable
+
+    def average_qtable(self, lists_of_qtables):
+        return np.array(lists_of_qtables).mean(axis=0)
+
+class MO_LinearQlearning():
+    """Q-learning formulation that tracks and updates multiple value functions"""
+    def __init__(self, learning_rate, gamma, state_dim, action_size, reward_dim):
+        self.qfuncs = [LinearQlearning(learning_rate, gamma, state_dim[i], action_size) for i in range(reward_dim)]
+        self.reward_dim = reward_dim
+
+        self.reset_qtable()
+        np.seterr(all='raise')
+
+    def update(self, state, action, reward, new_state):
+        for i in range(self.reward_dim):
+            self.qfuncs[i].update(state, action, reward[i], new_state)
+
+    def reset_qtable(self):
+        """Reset the Q-table."""
+        for qfunc in self.qfuncs:
+            qfunc.reset_qtable()
+
+    def action_values(self, state):
+        return np.array([qfunc.action_values(state) for qfunc in self.qfuncs])
+
+    def set_qtable(self, qtables):
+        for i, qtable in enumerate(qtables): self.qfuncs[i].set_qtable(qtable)
+
+    def get_qtable(self):
+        return [qfunc.qtable for qfunc in self.qfuncs]
+
+    def average_qtable(self, lists_of_qtables):
+        avg_qtables = []
+        for i in range(self.reward_dim):
+            avg_qtables.append(np.array([qtable[i] for qtable in lists_of_qtables]).mean(axis=0))
+        return avg_qtables
+    
 class TC_Qlearning():
     def __init__(self, learning_rate:float, gamma:float, state_low:np.array,
                  state_high:np.array, num_tilings:int, action_size:int,
@@ -124,9 +205,7 @@ class TC_Qlearning():
         self.tile_values = np.zeros(list(tile_value_shape))
 
 class MO_Qlearning():
-    """
-        Q-learning formulation that tracks and updates multiple value functions
-    """
+    """Q-learning formulation that tracks and updates multiple value functions"""
     def __init__(self, learning_rate, gamma, state_size, action_size, reward_dim):
         self.qfuncs = [Qlearning(learning_rate, gamma, state_size[i], action_size) for i in range(reward_dim)]
         self.reward_dim = reward_dim

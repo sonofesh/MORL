@@ -1,7 +1,6 @@
 import gymnasium as gym
-
 from gymnasium.envs.registration import register
-from render.render import render_browser
+#from render.render import render_browser
 
 register(
     id='morl/FrozenLakePlus-v1',

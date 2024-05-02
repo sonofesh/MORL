@@ -81,6 +81,21 @@ def generate_random_map(
     return ["".join(x) for x in board]
 
 
+# get minimum of list based on absolute value
+def get_abs_min(row, col, coin_dist):
+    distances = abs(row - coin_dist[:, 0]) + abs(col - coin_dist[:, 1])
+
+    min_ind = np.argmin(distances)
+    return row - coin_dist[min_ind, 0], col - coin_dist[min_ind, 1]
+
+def normalize(val, min_val, max_val):
+    return val
+    return (val - min_val)/(max_val - min_val)
+
+def euc_dist(row, col, target, norm = 2):
+    distance = pow(row - target[0], norm) + pow(col - target[1], norm)
+    return pow(distance, 1/norm)
+
 class FrozenLakePlusEnv(Env):
     """
     Frozen lake involves crossing a frozen lake from start to goal without falling into any holes
@@ -277,6 +292,8 @@ class FrozenLakePlusEnv(Env):
     def set_p(self):
         self.P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
         self.coin_coords = []
+        self.ice_coords = []
+        self.goal = ()
 
         for row in range(self.nrow):
             for col in range(self.ncol):
@@ -287,6 +304,8 @@ class FrozenLakePlusEnv(Env):
                     if letter in b"C":
                         self.coin_coords.append((row, col))
                     if letter in b"GH":
+                        if letter == b"G": self.goal = (row, col)
+                        if letter == b"H": self.ice_coords.append((row, col))
                         li.append((1.0, s, 0, True))
                     else:
                         if self.is_slippery:
@@ -297,6 +316,9 @@ class FrozenLakePlusEnv(Env):
                         else:
                             li.append((1.0, *self.update_probability_matrix(row, col, a)))
                     self.P[s][a] = li
+
+        self.coin_coords = np.array(self.coin_coords)
+        self.ice_coords = np.array(self.ice_coords)
 
     def from_s(self, s):
         return s // self.ncol, s % self.ncol
@@ -335,7 +357,6 @@ class FrozenLakePlusEnv(Env):
         transitions = self.P[self.s][a]
         i = categorical_sample([t[0] for t in transitions], self.np_random)
         p, s, r, t = transitions[i]
-        old_state = self.s
         self.s = s
         self.lastaction = a
 
@@ -343,14 +364,14 @@ class FrozenLakePlusEnv(Env):
             self.desc[self.from_s(s)] = b"F"
             self.set_p()
 
+        #if self.desc[self.from_s(s)] == b"H": print('fail')
+
         row, col = self.from_s(s)
+        if len(self.coin_coords) > 0: coin_dist = get_abs_min(row, col, self.coin_coords)
+        else: coin_dist = (0, 0)
 
-        if len(self.coin_coords) > 0:
-            euclidean_distances_to_coins = [abs(row-x[0]) + abs(col-x[1]) for x in self.coin_coords]#[math.sqrt((r - x[0])**2 + (c - x[1])**2) for x in self.coin_coords]
-            coin_dist = min(euclidean_distances_to_coins)
-        else:
-            coin_dist = 0
-
+        if len(self.ice_coords) > 0: ice_dist = get_abs_min(row, col, self.ice_coords)
+        else: ice_dist = (0, 0)
 
         if self.render_mode == "human":
             self.render()
@@ -359,7 +380,15 @@ class FrozenLakePlusEnv(Env):
         info = {"prob": p, "at_goal": self.desc[self.from_s(s)] == b"G", 'coins_cleared': coin_dist == 0 and self.use_coin_dist}
 
         if self.use_coin_dist:
-            return [int(s), coin_dist], r, t, False, info
+            #print('max_dist', euc_dist(0, 0, self.goal))
+            goal_dist = normalize(euc_dist(row, col, self.goal), 0, euc_dist(0, 0, self.goal)),
+            coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
+            ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
+
+            features = coin_dist + goal_dist + ice_dist
+            print(s, features)
+            #return a int state rep and then a tuple of state features
+            return [int(s), features], r, t, False, info
         return int(s), r, t, False, info
 
     def reset(
@@ -379,16 +408,24 @@ class FrozenLakePlusEnv(Env):
         if self.render_mode == "human":
             self.render()
 
-        r, c = self.from_s(self.s)
-
+        row, col = self.from_s(self.s)
         if len(self.coin_coords) > 0:
-            euclidean_distances_to_coins = [abs(r-x[0]) + abs(c-x[1]) for x in self.coin_coords]#[math.sqrt((r - x[0])**2 + (c - x[1])**2) for x in self.coin_coords]
-            coin_dist = min(euclidean_distances_to_coins)
-        else:
-            coin_dist = 0
+            coin_dist = get_abs_min(row, col, self.coin_coords)
+        else: coin_dist = (20,20)
+
+        if len(self.ice_coords) > 0: ice_dist = get_abs_min(row, col, self.ice_coords)
+        else: ice_dist = (20, 20)
 
         if self.use_coin_dist:
-            return [int(self.s), coin_dist], {"prob": 1}
+            #print('max_dist', euc_dist(0, 0, self.goal))
+            goal_dist = normalize(euc_dist(row, col, self.goal), 0, euc_dist(0, 0, self.goal)),
+            coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
+            ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
+
+            features = coin_dist + goal_dist + ice_dist
+            #return a int state rep and then a tuple of state features
+            return [int(self.s), features], {"prob": 1}
+        
         return int(self.s), {"prob": 1}
 
     def render(self):

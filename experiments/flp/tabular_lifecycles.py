@@ -3,18 +3,28 @@ from tqdm import tqdm
 from experiments.flp.utils import get_flp_env, postprocess, plot_states_actions_distribution, plot_first_and_last_frames
 from models.scalar_morl import Qlearning, EpsilonGreedy
 
-def just_state(state, map_size):
-    s, c_dist = state
+def just_state(state, shape):
+    s, features = state
     return s
 
-def tabular_state(state, map_size):
-    s, c_dist = state
-    return (s * (map_size*2)) + c_dist
+def get_features(state, shape):
+    s, features = state
+    return features
 
-def tabular_mo_state(state, map_size):
+def tabular_state(state, shape):
     s, c_dist = state
-    return s, (s * (map_size*2)) + c_dist
 
+    index = s * shape
+    for i, s in enumerate(state):
+        loc = np.prod(shape[i+1:]) if (i + 1) < len(state) else 1 
+        index += s * loc
+    
+    print(index)
+    return index
+
+def tabular_mo_state(state, shape):
+    #return location and index representation
+    return state[0], tabular_state(state, shape)
 
 def run_env_fully_tabular(
         params,
@@ -65,15 +75,11 @@ def run_env_fully_tabular(
     }
 
     for run in range(n_runs):  # Run several times to account for stochasticity
-        if training:
-            learner.reset_qtable()  # Reset the Q-table between runs
-        if load_checkpoint:
-            learner.set_qtable(qtables[run])
+        if training: learner.reset_qtable()  # Reset the Q-table between runs
+        if load_checkpoint: learner.set_qtable(qtables[run])
 
-        for episode in tqdm(
-            episodes, desc=f"Run {run}/{n_runs} - Episodes", leave=False, disable=not progress_bar
-        ):
-            state = tabular_state_fn(env.reset(seed=params.seed)[0], map_size=params.map_size)  # Reset the environment
+        for episode in tqdm(episodes, desc=f"Run {run}/{n_runs} - Episodes", leave=False, disable=not progress_bar):
+            state = tabular_state_fn(env.reset(seed=params.seed)[0], shape=params.state_dim)  # Reset the environment
 
             step = 0
             done = False
@@ -94,15 +100,13 @@ def run_env_fully_tabular(
                     action_space=env.action_space, q_values=learner.action_values(state)
                 )
 
-
-
                 # Log all states and actions
                 all_states.append(state)
                 all_actions.append(action)
 
                 # Take the action (a) and observe the outcome state(s') and reward (r)
                 new_state, raw_reward, terminated, truncated, info = env.step(action)
-                new_state = tabular_state_fn(new_state, map_size=params.map_size)
+                new_state = tabular_state_fn(new_state, shape=params.state_dim)
 
                 reward = reward_fn(raw_reward)
 
@@ -137,14 +141,11 @@ def run_env_fully_tabular(
             steps[episode, run] = step
 
         if training:
-            if load_checkpoint:
-                qtables[run] = learner.get_qtable()
-            else:
-                qtables.append(learner.get_qtable())
+            if load_checkpoint: qtables[run] = learner.get_qtable()
+            else: qtables.append(learner.get_qtable())
 
     stats['total_steps'] = np.array(stats['total_steps']).mean()
     return rewards, steps, episodes, qtables, all_states, all_actions, stats
-
 
 def run_training(
         params,
@@ -298,7 +299,6 @@ def run_training(
 
     return training_res_all, training_st_all, qtables[0], eval_recorded_stats
 
-
 def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, reward_fn, map_size=None, scalar_vector_update_schedule_inner_episode=None):
     scalar_vector_update_schedule_inner_episode = scalar_vector_update_schedule_inner_episode.copy() if scalar_vector_update_schedule_inner_episode else None
     if not map_size:
@@ -311,7 +311,7 @@ def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, rew
     learner, explorer = setup_learning_and_explorer_code(params)
     explorer.eval = True
 
-    state = tabular_state_fn(env.reset(seed=params.seed)[0], map_size=params.map_size)  # Reset the environment
+    state = tabular_state_fn(env.reset(seed=params.seed)[0], shape = params.state_dim)  # Reset the environment
 
     step = 0
     done = False
@@ -336,15 +336,14 @@ def vis_run(setup_learning_and_explorer_code, tabular_state_fn, params, env, rew
 
         # Take the action (a) and observe the outcome state(s') and reward (r)
         new_state, raw_reward, terminated, truncated, info = env.step(action)
-        new_state = tabular_state_fn(new_state, map_size=params.map_size)
+        new_state = tabular_state_fn(new_state, shape = params.state_dim)
 
         reward = reward_fn(raw_reward)
-
         done = terminated or truncated
 
         total_rewards += sum(reward) if isinstance(reward, list) or isinstance(reward, tuple) else reward
         step += 1
-
+        
         # Our new state is state
         state = new_state
     explorer.eval = False

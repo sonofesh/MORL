@@ -12,6 +12,7 @@ class Params(NamedTuple):
     n_runs: int  # Number of runs
     action_size: int  # Number of possible actions
     state_size: int  # Number of possible states
+    state_dim: int  # Number of state features
     max_episode_len: int # number of possible steps in episode
     proba_frozen: float  # Probability that a tile is frozen
     proba_hole: float # Probability that a tile is a hole

@@ -4,10 +4,6 @@ import gymnasium as gym
 from environments.frozen_lake_plus.frozen_lake_plus import generate_random_map
 
 
-
-
-
-
 def postprocess(episodes, params, rewards, steps, map_size):
     import pandas as pd
 
@@ -27,9 +23,7 @@ def postprocess(episodes, params, rewards, steps, map_size):
     return res, st
 
 
-
-
-def plot_first_and_last_frames(env, map_size, first_frame, params, img_title_postfix=""):
+def plot_first_and_last_frames(env, map_size, first_frame, params, img_title_postfix="", show=False):
     import matplotlib.pyplot as plt
 
     """Plot the last frame of the simulation and the policy learned."""
@@ -48,8 +42,7 @@ def plot_first_and_last_frames(env, map_size, first_frame, params, img_title_pos
     # set plot title to img_title
     fig.suptitle(img_title)
     fig.savefig(params.savefig_folder / img_title, bbox_inches="tight")
-    plt.show()
-
+    if show: tplt.show()
 
 
 def plot_states_actions_distribution(states, actions, map_size, params):
@@ -70,6 +63,7 @@ def plot_states_actions_distribution(states, actions, map_size, params):
     img_title = f"frozenlake_states_actions_distrib_{map_size}x{map_size}.png"
     fig.savefig(params.savefig_folder / img_title, bbox_inches="tight")
     plt.show()
+
 
 def plot_steps_and_rewards(rewards_df, steps_df, params):
     import matplotlib.pyplot as plt
@@ -100,6 +94,7 @@ def register_flp():
         max_episode_steps=300,
     )
 
+
 def get_flp_env(params, map_size=None, render_mode="rgb_array"):
     register_flp()
 
@@ -113,7 +108,6 @@ def get_flp_env(params, map_size=None, render_mode="rgb_array"):
             size=map_size, p=[params.proba_frozen, params.proba_hole, params.proba_coin], seed=params.seed
         ),
     )
-
 
 
 def run_checkpoint_in_website(checkpoint):
