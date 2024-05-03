@@ -3,6 +3,8 @@ from contextlib import closing
 from io import StringIO
 from os import path
 from typing import List, Optional
+import logging
+logging.getLogger().setLevel(logging.CRITICAL)
 
 import numpy as np
 

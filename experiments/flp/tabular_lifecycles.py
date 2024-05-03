@@ -19,12 +19,12 @@ def tabular_state(state, shape):
         loc = np.prod(shape[i+1:]) if (i + 1) < len(state) else 1 
         index += s * loc
     
-    print(index)
     return index
 
 def tabular_mo_state(state, shape):
-    #return location and index representation
-    return state[0], tabular_state(state, shape)
+    s, features = state
+    #return location and feature representation
+    return s, features
 
 def run_env_fully_tabular(
         params,

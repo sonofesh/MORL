@@ -58,7 +58,7 @@ def run_experiment_1():
     SKIP_GO = True
     # 3.8 reward | 90% completion
     SKIP_BASE = True
-    SKIP_SIMPLE_MORL = True
+    SKIP_SIMPLE_MORL = False
     SKIP_INTEREPISODE_MORL = False
 
     map_sizes = [4]#, 7, 9, 11]
@@ -96,7 +96,7 @@ def run_experiment_1():
                 LinearQlearning(
                     learning_rate=params.learning_rate,
                     gamma=params.gamma,
-                    state_dim=params.state_dim,
+                    state_info=params.state_dim,
                     action_size=params.action_size,
                 ), EpsilonGreedy(
                     epsilon=params.epsilon,
@@ -137,14 +137,12 @@ def run_experiment_1():
             #     vis_run(partial(load, qtable), get_features, params, env, simple_morl_reward_fn, map_size=map_size)
 
 
-
-
         if not SKIP_SIMPLE_MORL:
             simple_morl_setup = lambda params: (
                 MO_LinearQlearning(
                     learning_rate=params.learning_rate,
                     gamma=params.gamma,
-                    state_dim=[params.state_dim, params.state_dim],
+                    state_info=[params.map_size**2, params.state_dim],
                     action_size=params.action_size,
                     reward_dim=2
                 ), MO_EpsilonGreedy(
@@ -168,20 +166,19 @@ def run_experiment_1():
                 map_size=map_size,
                 setup_learning_and_explorer_code=simple_morl_setup,
                 scalar_vector_update_schedule=scalar_vector_update_schedule,
-                tabular_state_fn=get_features,
+                tabular_state_fn=tabular_mo_state,
                 eval_total_episodes=params.eval_total_episodes,
                 eval_frequency=params.eval_freq
             )
             json.dump(simple_morl_res, open("exp1_results/simple_morl.json", "w"))
 
         
-
         if not SKIP_INTEREPISODE_MORL:
             simple_morl_setup = lambda params: (
                 MO_LinearQlearning(
                     learning_rate=params.learning_rate,
                     gamma=params.gamma,
-                    state_dim=[params.state_dim, params.state_dim], #[params.map_size**2, params.state_size],
+                    state_info=[params.map_size**2, params.state_dim], #[params.map_size**2, params.state_size],
                     action_size=params.action_size,
                     reward_dim=2
                 ), MO_EpsilonGreedy(
@@ -212,7 +209,7 @@ def run_experiment_1():
                 setup_learning_and_explorer_code=simple_morl_setup,
                 scalar_vector_update_schedule=scalar_vector_update_schedule,
                 # scalar_vector_update_schedule_inner_episode=scalar_vector_update_schedule_inner_episode,
-                tabular_state_fn=get_features,
+                tabular_state_fn=tabular_mo_state,
                 eval_total_episodes=params.eval_total_episodes,
                 eval_frequency=params.eval_freq
             )
@@ -223,7 +220,7 @@ def run_experiment_1():
                 learner = MO_LinearQlearning(
                     learning_rate=params.learning_rate,
                     gamma=params.gamma,
-                    state_dim=[params.state_dim, params.state_dim],
+                    state_info=[params.map_size**2, params.state_dim],
                     action_size=params.action_size,
                     reward_dim=2
                 )
@@ -243,9 +240,10 @@ def run_experiment_1():
             # save qtable as list of numpy arrays
             # if isinstance(qtable, list):
             #     qtable = [qtable[0][i].tolist() for i in range(len(qtable))]
-            w, b = qtable[0]
+            q_values = qtable[0]
             w2,b2 = qtable[1]
-            qtable = [[w.tolist(), b], [w2.tolist(), b2]]
+            print(q_values)
+            qtable = [q_values, [w2.tolist(), b2]]
 
             json.dump(qtable, open("../../models/checkpoints/qtable.json", "w"))
 
@@ -256,7 +254,7 @@ def run_experiment_1():
             qtable = [[np.array(x[0]), x[1]] for x in qtables]
 
             while True:
-                vis_run(partial(setup_learning_and_explorer_code, qtable), get_features, params, env, simple_morl_reward_fn, map_size=map_size, 
+                vis_run(partial(setup_learning_and_explorer_code, qtable), tabular_mo_state, params, env, simple_morl_reward_fn, map_size=map_size, 
                         scalar_vector_update_schedule_inner_episode=scalar_vector_update_schedule_inner_episode)
 
 

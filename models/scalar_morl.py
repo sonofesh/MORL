@@ -58,7 +58,7 @@ class Qlearning:
         """Update Q(s,a):= Q(s,a) + lr [R(s,a) + gamma * max Q(s',a') - Q(s,a)]"""
         delta = (
             reward
-            + self.gamma * np.max(self.qtable[new_state, :], axis=0)
+            + self.gamma * np.max(self.action_values(state), axis=0)
             - self.qtable[state, action]
         )
         q_update = self.qtable[state, action] + self.learning_rate * delta
@@ -133,24 +133,26 @@ class LinearQlearning():
 
 class MO_LinearQlearning():
     """Q-learning formulation that tracks and updates multiple value functions"""
-    def __init__(self, learning_rate, gamma, state_dim, action_size, reward_dim):
-        self.qfuncs = [LinearQlearning(learning_rate, gamma, state_dim[i], action_size) for i in range(reward_dim)]
+    def __init__(self, learning_rate, gamma, state_info, action_size, reward_dim):
+        state_size, state_dim = state_info
+        self.qfuncs = [Qlearning(learning_rate, gamma, state_size, action_size),
+                       LinearQlearning(learning_rate, gamma, state_dim, action_size)]
         self.reward_dim = reward_dim
 
         self.reset_qtable()
-        np.seterr(all='raise')
+        #np.seterr(all='raise')
 
     def update(self, state, action, reward, new_state):
-        for i in range(self.reward_dim):
-            self.qfuncs[i].update(state, action, reward[i], new_state)
+        print(reward)
+        for ind, qfunc in enumerate(self.qfuncs):
+            qfunc.update(state[ind], action, reward[ind], new_state[ind])
 
     def reset_qtable(self):
         """Reset the Q-table."""
-        for qfunc in self.qfuncs:
-            qfunc.reset_qtable()
+        for qfunc in self.qfuncs: qfunc.reset_qtable()
 
     def action_values(self, state):
-        return np.array([qfunc.action_values(state) for qfunc in self.qfuncs])
+        return np.array([qfunc.action_values(state[ind]) for ind, qfunc in enumerate(self.qfuncs)])
 
     def set_qtable(self, qtables):
         for i, qtable in enumerate(qtables): self.qfuncs[i].set_qtable(qtable)
