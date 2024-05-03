@@ -98,6 +98,7 @@ qstr = files('models.checkpoints').joinpath('demo_qtable.json').read_text()
 qtables = json.loads(qstr)
 #qtable = [[np.array(x[0]), x[1]] for x in qtables]
 qtable = [np.array(qtables[0]), [np.array(qtables[1][0]), qtables[1][1]]]
+print(qtable[0])
 
 
 while True:
@@ -123,6 +124,9 @@ while True:
         await sleep(1 / int(speed))
         goal_scale = int(document.querySelector('#gqfunc').value) / 100
         cookie_scale = int(document.querySelector('#cookiesqfunc').value) / 100
+        print(f"{goal_scale} | Goal Scale | {explorer.scalar_vector[0]}")
+        print(f"{cookie_scale} | Cookie Scale | {explorer.scalar_vector[1]}")
+
         scalar_vector = [goal_scale, cookie_scale]
         explorer.update(scalar_vector=scalar_vector)
 

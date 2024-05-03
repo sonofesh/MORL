@@ -421,8 +421,10 @@ class FrozenLakePlusEnv(Env):
             #print('max_dist', euc_dist(0, 0, self.goal))
             # goal_dist = normalize(self.goal[0] - row, 0, self.nrow), normalize(self.goal[1] - col, col, self.goal)[1], 0, self.ncol)
             goal_dist = normalize(self.goal[0] - row, 0, self.nrow), normalize(self.goal[1] - col, 0, self.ncol)
-            coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
-            ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
+            # coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
+            # ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
+            coin_dist = normalize(coin_dist[0], 0, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
+            ice_dist = normalize(ice_dist[0], 0, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
 
             exsist_ice_vals = [
                 int(any([all(x == self.inc(*self.from_s(self.s), LEFT)) for x in self.ice_coords])),
@@ -486,8 +488,10 @@ class FrozenLakePlusEnv(Env):
             # goal_dist = normalize(euc_dist(row, col, self.goal)[0], 0, euc_dist(0, 0, self.goal)[0]), normalize(euc_dist(row, col, self.goal)[1], 0, euc_dist(0, 0, self.goal)[1]),
             goal_dist = normalize(self.goal[0] - row, 0, self.nrow), normalize(self.goal[1] - col, 0, self.ncol)
 
-            coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
-            ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
+            # coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
+            # ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
+            coin_dist = normalize(coin_dist[0], 0, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
+            ice_dist = normalize(ice_dist[0], 0, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
 
             exsist_ice_vals = [
                 int(any([all(x == self.inc(*self.from_s(self.s), LEFT)) for x in self.ice_coords])),

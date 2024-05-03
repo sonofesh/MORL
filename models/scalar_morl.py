@@ -39,8 +39,8 @@ class MO_EpsilonGreedy(EpsilonGreedy):
         # multiply the scalars in scalar vector with the vectors in q_values then return
         if scalar_vector is None:
             scalar_vector = self.scalar_vector
-        #return np.dot(scalar_vector, q_values)
-        return q_values[1]
+        return np.dot(scalar_vector, q_values)
+        # return q_values[1]
 
 
     def choose_action(self, action_space, q_values, scalar_vector=None):
@@ -49,7 +49,7 @@ class MO_EpsilonGreedy(EpsilonGreedy):
         q_values = self.scalarize(q_values)
         return super().choose_action(action_space, q_values)
 
-    def update(self, scalar_vector, **kwargs):
+    def update(self, scalar_vector):
         self.scalar_vector = scalar_vector
 
 class Qlearning:
