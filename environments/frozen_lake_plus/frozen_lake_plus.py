@@ -91,8 +91,8 @@ def get_abs_min(row, col, coin_dist):
     return coin_dist[min_ind, 0] - row, coin_dist[min_ind, 1] - col
 
 def normalize(val, min_val, max_val):
-    return val
-    # return (val - min_val)/(max_val - min_val)
+    # return val
+    return (val - min_val)/(max_val - min_val)
 
 def euc_dist(row, col, target, norm = 2):
     return row - target[0], col - target[1]
@@ -259,7 +259,7 @@ class FrozenLakePlusEnv(Env):
         use_coin_dist: bool = True,
         use_goal_dist_feat: bool = False,
         use_ice_feat: bool = False,
-        use_ice_existence_feat: bool = False,
+        use_ice_existence_feat: bool = True,
     ):
         if desc is None and map_name is None:
             desc = generate_random_map(size=custom_map_size)

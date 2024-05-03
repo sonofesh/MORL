@@ -151,7 +151,11 @@ while True:
 
         # Our new state is state
         state = new_state
+
+    env.render()
     explorer.eval = False
+    speed = document.querySelector('#speed').value
+    await sleep(1 / int(speed))
 
 
       `);
