@@ -40,7 +40,6 @@ def run_env_fully_tabular(
         tabular_state_fn=tabular_state,
         scalar_vector_update_schedule_inner_episode=None
 ):
-    scalar_vector_update_schedule_inner_episode = scalar_vector_update_schedule_inner_episode.copy() if scalar_vector_update_schedule_inner_episode else None
 
     if total_episodes is None:
         total_episodes = params.total_episodes
@@ -80,6 +79,7 @@ def run_env_fully_tabular(
 
         for episode in tqdm(episodes, desc=f"Run {run}/{n_runs} - Episodes", leave=False, disable=not progress_bar):
             state = tabular_state_fn(env.reset(seed=params.seed)[0], shape=params.state_dim)  # Reset the environment
+            _scalar_vector_update_schedule_inner_episode = scalar_vector_update_schedule_inner_episode.copy() if scalar_vector_update_schedule_inner_episode else None
 
             step = 0
             done = False
@@ -88,13 +88,13 @@ def run_env_fully_tabular(
             cleared_coins = False
 
             while not done:
-                if scalar_vector_update_schedule_inner_episode and len(scalar_vector_update_schedule_inner_episode) > 0:
-                    next_update = scalar_vector_update_schedule_inner_episode[0]
+                if _scalar_vector_update_schedule_inner_episode and len(_scalar_vector_update_schedule_inner_episode) > 0:
+                    next_update = _scalar_vector_update_schedule_inner_episode[0]
                     at_i = next_update[0]
                     if at_i == step:
                         scalar_vector = next_update[1]
                         explorer.update(scalar_vector=scalar_vector)
-                        scalar_vector_update_schedule_inner_episode.pop(0)
+                        _scalar_vector_update_schedule_inner_episode.pop(0)
 
                 action = explorer.choose_action(
                     action_space=env.action_space, q_values=learner.action_values(state)

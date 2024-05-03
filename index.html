@@ -55,7 +55,7 @@ def setup_learning_and_explorer_code(qtable, params):
     learner = MO_LinearQlearning(
         learning_rate=params.learning_rate,
         gamma=params.gamma,
-        state_dim=[params.state_dim, params.state_dim],
+        state_info=[params.map_size**2, params.state_dim],
         action_size=params.action_size,
         reward_dim=2
     )
@@ -96,7 +96,8 @@ env = get_flp_env(params, params.map_size, render_mode="human")
 
 qstr = files('models.checkpoints').joinpath('demo_qtable.json').read_text()
 qtables = json.loads(qstr)
-qtable = [[np.array(x[0]), x[1]] for x in qtables]
+#qtable = [[np.array(x[0]), x[1]] for x in qtables]
+qtable = [np.array(qtables[0]), [np.array(qtables[1][0]), qtables[1][1]]]
 
 
 while True:
@@ -109,7 +110,7 @@ while True:
     learner, explorer = setup_learning_and_explorer_code(qtable, params)
     explorer.eval = True
 
-    state = get_features(env.reset(seed=params.seed)[0],  shape=params.state_dim)  # Reset the environment
+    state = tabular_mo_state(env.reset(seed=params.seed)[0],  shape=params.state_dim)  # Reset the environment
 
     step = 0
     done = False
@@ -134,7 +135,7 @@ while True:
         # Take the action (a) and observe the outcome state(s') and reward (r)
         new_state, raw_reward, terminated, truncated, info = env.step(action)
         # new_state = tabular_mo_state(new_state, map_size=params.map_size)
-        new_state = get_features(new_state, shape=params.state_dim)
+        new_state = tabular_mo_state(new_state, None)  #get_features(new_state, shape=params.state_dim)
 
 
         reward = simple_morl_reward_fn(raw_reward)

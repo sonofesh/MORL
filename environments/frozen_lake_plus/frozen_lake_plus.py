@@ -88,11 +88,11 @@ def get_abs_min(row, col, coin_dist):
     distances = abs(row - coin_dist[:, 0]) + abs(col - coin_dist[:, 1])
 
     min_ind = np.argmin(distances)
-    return row - coin_dist[min_ind, 0], col - coin_dist[min_ind, 1]
+    return coin_dist[min_ind, 0] - row, coin_dist[min_ind, 1] - col
 
 def normalize(val, min_val, max_val):
-    # return val
-    return (val - min_val)/(max_val - min_val)
+    return val
+    # return (val - min_val)/(max_val - min_val)
 
 def euc_dist(row, col, target, norm = 2):
     return row - target[0], col - target[1]
@@ -130,6 +130,20 @@ class FrozenLakePlusEnv(Env):
     - 1: Move down
     - 2: Move right
     - 3: Move up
+
+    C
+    p
+    -> [-1, 0]
+
+    p
+    C
+    -> [1, 0]
+
+    C p
+    -> [0, -1]
+
+    p C
+    -> [0, 1]
 
     ## Observation Space
     The observation is a value representing the player's current position as
@@ -243,9 +257,9 @@ class FrozenLakePlusEnv(Env):
         reset_coins=True,
         custom_map_size=8,
         use_coin_dist: bool = True,
-        use_goal_dist_feat: bool = True,
+        use_goal_dist_feat: bool = False,
         use_ice_feat: bool = False,
-        use_ice_existence_feat: bool = True,
+        use_ice_existence_feat: bool = False,
     ):
         if desc is None and map_name is None:
             desc = generate_random_map(size=custom_map_size)
@@ -399,13 +413,14 @@ class FrozenLakePlusEnv(Env):
             self.render()
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
 
-        info = {"prob": p, "at_goal": self.desc[self.from_s(s)] == b"G", 'coins_cleared': coin_dist == 0 and self.use_coin_dist}
-        if t and not self.desc[self.from_s(s)] == b"G":
-            r = [x-0.1 for x in r]
+        info = {"prob": p, "at_goal": self.desc[self.from_s(s)] == b"G", 'coins_cleared':  len(self.coin_coords) == 0 and self.use_coin_dist}
+        # if t and self.desc[self.from_s(s)] != b"G":
+        #     r = [x-0.1 for x in r]
 
         if self.features_dim > 0:
             #print('max_dist', euc_dist(0, 0, self.goal))
-            goal_dist = normalize(euc_dist(row, col, self.goal)[0], 0, euc_dist(0, 0, self.goal)[0]), normalize(euc_dist(row, col, self.goal)[1], 0, euc_dist(0, 0, self.goal)[1]),
+            # goal_dist = normalize(self.goal[0] - row, 0, self.nrow), normalize(self.goal[1] - col, col, self.goal)[1], 0, self.ncol)
+            goal_dist = normalize(self.goal[0] - row, 0, self.nrow), normalize(self.goal[1] - col, 0, self.ncol)
             coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
             ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
 
@@ -468,7 +483,9 @@ class FrozenLakePlusEnv(Env):
             #print('max_dist', euc_dist(0, 0, self.goal))
             # goal_dist = normalize(euc_dist(row, col, self.goal), 0, euc_dist(0, 0, self.goal)),
             # goal_dist = normalize(euc_dist(row, col, self.goal)[0], 0, euc_dist(0, 0, self.goal)[0]),
-            goal_dist = normalize(euc_dist(row, col, self.goal)[0], 0, euc_dist(0, 0, self.goal)[0]), normalize(euc_dist(row, col, self.goal)[1], 0, euc_dist(0, 0, self.goal)[1]),
+            # goal_dist = normalize(euc_dist(row, col, self.goal)[0], 0, euc_dist(0, 0, self.goal)[0]), normalize(euc_dist(row, col, self.goal)[1], 0, euc_dist(0, 0, self.goal)[1]),
+            goal_dist = normalize(self.goal[0] - row, 0, self.nrow), normalize(self.goal[1] - col, 0, self.ncol)
+
             coin_dist = normalize(coin_dist[0], -self.nrow, self.nrow), normalize(coin_dist[1], -self.ncol, self.ncol)
             ice_dist = normalize(ice_dist[0], -self.nrow, self.nrow), normalize(ice_dist[1], -self.ncol, self.ncol)
 

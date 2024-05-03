@@ -44,9 +44,9 @@ def run_experiment_1():
         n_runs=20,
         action_size=None,
         state_size=None,
-        proba_frozen=0.5,
+        proba_frozen=0.6,
         proba_coin=0.4,
-        proba_hole=0.1,
+        proba_hole=0.0,
         eval_total_episodes=10,
         eval_freq=250,
         savefig_folder=Path("../../_static/img/tutorials/"),
@@ -58,7 +58,7 @@ def run_experiment_1():
     SKIP_GO = True
     # 3.8 reward | 90% completion
     SKIP_BASE = True
-    SKIP_SIMPLE_MORL = False
+    SKIP_SIMPLE_MORL = True
     SKIP_INTEREPISODE_MORL = False
 
     map_sizes = [4]#, 7, 9, 11]
@@ -96,7 +96,7 @@ def run_experiment_1():
                 LinearQlearning(
                     learning_rate=params.learning_rate,
                     gamma=params.gamma,
-                    state_info=params.state_dim,
+                    state_dim=params.state_dim,
                     action_size=params.action_size,
                 ), EpsilonGreedy(
                     epsilon=params.epsilon,
@@ -132,6 +132,49 @@ def run_experiment_1():
                 )
                 learner.set_qtable(qtable)
                 return learner, exp
+
+
+            def setup_learning_and_explorer_code(qtable, params):
+                learner = LinearQlearning(
+                    learning_rate=params.learning_rate,
+                    gamma=params.gamma,
+                    state_dim=params.state_dim,
+                    action_size=params.action_size,
+                )
+                explorer = EpsilonGreedy(
+                    epsilon=params.epsilon,
+                    seed=params.seed,
+                )
+
+                learner.set_qtable(qtable)
+                return learner, explorer
+
+            env = get_flp_env(params, map_size, render_mode="human")
+            # while True:
+            #     vis_run(partial(setup_learning_and_explorer_code, qtable), tabular_mo_state, params, env, simple_morl_reward_fn, map_size=map_size, scalar_vector_update_schedule_inner_episode=scalar_vector_update_schedule_inner_episode)
+
+            # save qtable as list of numpy arrays
+            # if isinstance(qtable, list):
+            #     qtable = [qtable[0][i].tolist() for i in range(len(qtable))]
+            # q_values = qtable[0]
+            # w2,b2 = qtable[0]
+            # print(q_values)
+            # # qtable = [q_values.tolist(), [w2.tolist(), b2]]
+            # qtable = [w2.tolist(), b2]
+            # #
+            # json.dump(qtable, open("../../models/checkpoints/demo_qtable.json", "w"))
+            #
+            # # load qtable from file
+            # import numpy as np
+            # qtables = json.load(open("../../models/checkpoints/demo_qtable.json"))
+            # # qtable = [np.array(x) for x in qtables]
+            # # qtable = [[np.array(x[0]), x[1]] for x in qtables]
+            # qtable = [np.array(qtables[0]), [np.array(qtables[1][0]), qtables[1][1]]]
+
+            while True:
+                vis_run(partial(setup_learning_and_explorer_code, qtable), get_features, params, env, baseline_reward_fn, map_size=map_size)
+
+
 
             # while True:
             #     vis_run(partial(load, qtable), get_features, params, env, simple_morl_reward_fn, map_size=map_size)
@@ -189,17 +232,16 @@ def run_experiment_1():
             )
 
             scalar_vector_update_schedule_inner_episode = [
-                [0, [0.0, 1.0]],
+                [0, [0.00, 1.0]],
                 [10, [0.1, 0.9]],
-                [20, [0.4, 0.6]],
-                [40, [0.9, 0.1]],
-                [50, [1.0, 0.0]],
+                [20, [0.5, 0.5]],
+                [40, [1.0, 0.0]],
             ]
 
             scalar_vector_update_schedule = [
-                [0, [1.0, 0.0]],
+                # [0, [1.0, 0.0]],
                 # [750, [0.1, 0.9]],
-                [250, scalar_vector_update_schedule_inner_episode]
+                [0, scalar_vector_update_schedule_inner_episode]
             ]
 
             _, _, qtable, inter_episode_scheduling_res = run_training(
@@ -242,16 +284,18 @@ def run_experiment_1():
             #     qtable = [qtable[0][i].tolist() for i in range(len(qtable))]
             q_values = qtable[0]
             w2,b2 = qtable[1]
-            print(q_values)
-            qtable = [q_values, [w2.tolist(), b2]]
+            # print(q_values)
+            print(w2)
+            qtable = [q_values.tolist(), [w2.tolist(), b2]]
 
-            json.dump(qtable, open("../../models/checkpoints/qtable.json", "w"))
+            json.dump(qtable, open("../../models/checkpoints/demo_qtable.json", "w"))
 
             # load qtable from file
             import numpy as np
-            qtables = json.load(open("../../models/checkpoints/qtable.json"))
+            qtables = json.load(open("../../models/checkpoints/demo_qtable.json"))
             # qtable = [np.array(x) for x in qtables]
-            qtable = [[np.array(x[0]), x[1]] for x in qtables]
+            # qtable = [[np.array(x[0]), x[1]] for x in qtables]
+            qtable = [np.array(qtables[0]), [np.array(qtables[1][0]), qtables[1][1]]]
 
             while True:
                 vis_run(partial(setup_learning_and_explorer_code, qtable), tabular_mo_state, params, env, simple_morl_reward_fn, map_size=map_size, 

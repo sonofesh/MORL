@@ -14,6 +14,7 @@ class EpsilonGreedy():
 
         # Exploration
         if explor_exploit_tradeoff < self.epsilon and not self.eval:
+            # print("SAMPLE")
             action = action_space.sample()
 
         # Exploitation (taking the biggest Q-value for this state)
@@ -35,11 +36,16 @@ class MO_EpsilonGreedy(EpsilonGreedy):
         self.scalar_vector = scalar_vector
 
     def scalarize(self, q_values, scalar_vector=None):
-        if scalar_vector is None: scalar_vector = self.scalar_vector
-        return np.sum(np.expand_dims(scalar_vector, axis = -1) * q_values, axis = 0)
+        # multiply the scalars in scalar vector with the vectors in q_values then return
+        if scalar_vector is None:
+            scalar_vector = self.scalar_vector
+        #return np.dot(scalar_vector, q_values)
+        return q_values[1]
+
 
     def choose_action(self, action_space, q_values, scalar_vector=None):
-        if scalar_vector is None: scalar_vector = self.scalar_vector
+        if scalar_vector is None:
+            scalar_vector = self.scalar_vector
         q_values = self.scalarize(q_values)
         return super().choose_action(action_space, q_values)
 
@@ -58,7 +64,7 @@ class Qlearning:
         """Update Q(s,a):= Q(s,a) + lr [R(s,a) + gamma * max Q(s',a') - Q(s,a)]"""
         delta = (
             reward
-            + self.gamma * np.max(self.action_values(state), axis=0)
+            + self.gamma * np.max(self.action_values(new_state), axis=0)
             - self.qtable[state, action]
         )
         q_update = self.qtable[state, action] + self.learning_rate * delta
@@ -96,14 +102,16 @@ class LinearQlearning():
             + self.gamma * np.max(self.action_values(new_state), axis=0)
             - self.q_value(state, action)
         )
+        # print(delta)
+        regularization_term = 0.1 * self.w[action]
 
-        self.w[action] = self.w[action] + self.learning_rate * delta * np.array(state)
+        self.w[action] = self.w[action] + self.learning_rate * (delta * np.array(state) - regularization_term)
         # self.bias += self.learning_rate * delta
 
     def q_value(self, state, action):
         #print('state', state)
         try:
-            result = (self.w[action] * state).sum() + self.bias
+            result = np.dot(self.w[action], state) #(self.w[action] * state).sum() + self.bias
         except FloatingPointError as e:
             print("Overflow", state, self.w[action], self.bias)
 
@@ -143,7 +151,7 @@ class MO_LinearQlearning():
         #np.seterr(all='raise')
 
     def update(self, state, action, reward, new_state):
-        print(reward)
+        # print(reward)
         for ind, qfunc in enumerate(self.qfuncs):
             qfunc.update(state[ind], action, reward[ind], new_state[ind])
 
