@@ -14,8 +14,8 @@ class EpsilonGreedy():
 
         # Exploration
         if explor_exploit_tradeoff < self.epsilon and not self.eval:
-            # print("SAMPLE")
             action = action_space.sample()
+            # print(f"SAMPLE | {action}")
 
         # Exploitation (taking the biggest Q-value for this state)
         else:

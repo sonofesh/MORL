@@ -20,6 +20,10 @@ def baseline_goal_only_reward_fn(reward, lambda1=1.0, lambda2=1.0):
 def baseline_reward_fn(reward, lambda1=1.0, lambda2=1.0):
     goal_achieved = lambda1 * reward[0]
     coin_collected = lambda2 * reward[1]
+
+    # if goal_achieved:
+    #     goal_achieved = -1
+    #     coin_collected = -1
     return goal_achieved + coin_collected #- 0.1
 
 def simple_morl_reward_fn(reward, lambda1=1.0, lambda2=1.0):
@@ -32,7 +36,7 @@ def run_experiment_1():
     import pandas as pd
 
     params = Params(
-        total_episodes=2000,
+        total_episodes=20000,
         max_episode_len=None,
         learning_rate=0.1,
         gamma=0.95,
@@ -61,8 +65,8 @@ def run_experiment_1():
     SKIP_SIMPLE_MORL = True
     SKIP_INTEREPISODE_MORL = False
 
-    map_sizes = [4]#, 7, 9, 11]
-    #map_sizes = [20]
+    #map_sizes = [4]#, 7, 9, 11]
+    map_sizes = [5]
     res_all = pd.DataFrame()
     st_all = pd.DataFrame()
 
@@ -227,15 +231,16 @@ def run_experiment_1():
                 ), MO_EpsilonGreedy(
                     epsilon=params.epsilon,
                     seed=params.seed,
-                    scalar_vector=[1, 0]
+                    scalar_vector=[0, 1]
                 )
             )
 
+            timestamp_mult = 2
             scalar_vector_update_schedule_inner_episode = [
                 [0, [0.00, 1.0]],
-                [10, [0.1, 0.9]],
-                [20, [0.5, 0.5]],
-                [40, [1.0, 0.0]],
+                [10 * timestamp_mult, [0.1, 0.9]],
+                [20 * timestamp_mult, [0.5, 0.5]],
+                [40 * timestamp_mult, [1.0, 0.0]],
             ]
 
             scalar_vector_update_schedule = [

@@ -260,6 +260,7 @@ class FrozenLakePlusEnv(Env):
         use_goal_dist_feat: bool = False,
         use_ice_feat: bool = False,
         use_ice_existence_feat: bool = True,
+        use_ice_penalty: bool = False,
     ):
         if desc is None and map_name is None:
             desc = generate_random_map(size=custom_map_size)
@@ -274,6 +275,7 @@ class FrozenLakePlusEnv(Env):
         self.reward_range = (0, 1)
         self.is_slippery = is_slippery
         self.reset_coins = reset_coins
+        self.use_ice_penalty = use_ice_penalty
 
         self.p_state = 0
 
@@ -342,7 +344,10 @@ class FrozenLakePlusEnv(Env):
                     if letter in b"GH":
                         if letter == b"G": self.goal = (row, col)
                         if letter == b"H": self.ice_coords.append((row, col))
-                        li.append((1.0, s, 0, True))
+                        if letter == b"G":
+                            li.append((1.0, s, [1.0, 0.0], True))
+                        else:
+                            li.append((1.0, s, [0,0], True))
                     else:
                         if self.is_slippery:
                             for b in [(a - 1) % 4, a, (a + 1) % 4]:
@@ -414,8 +419,8 @@ class FrozenLakePlusEnv(Env):
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
 
         info = {"prob": p, "at_goal": self.desc[self.from_s(s)] == b"G", 'coins_cleared':  len(self.coin_coords) == 0 and self.use_coin_dist}
-        # if t and self.desc[self.from_s(s)] != b"G":
-        #     r = [x-0.1 for x in r]
+        if t and self.desc[self.from_s(s)] != b"G" and self.use_ice_penalty:
+            r = [x-1 for x in r]
 
         if self.features_dim > 0:
             #print('max_dist', euc_dist(0, 0, self.goal))
